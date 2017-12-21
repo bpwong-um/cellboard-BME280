@@ -1,0 +1,3654 @@
+ARM GAS  C:\Users\mame\AppData\Local\Temp\ccQcqcr0.s 			page 1
+
+
+   1              		.syntax unified
+   2              		.cpu cortex-m3
+   3              		.fpu softvfp
+   4              		.eabi_attribute 20, 1
+   5              		.eabi_attribute 21, 1
+   6              		.eabi_attribute 23, 3
+   7              		.eabi_attribute 24, 1
+   8              		.eabi_attribute 25, 1
+   9              		.eabi_attribute 26, 1
+  10              		.eabi_attribute 30, 6
+  11              		.eabi_attribute 34, 1
+  12              		.eabi_attribute 18, 4
+  13              		.thumb
+  14              		.syntax unified
+  15              		.file	"BME280.c"
+  16              		.text
+  17              	.Ltext0:
+  18              		.cfi_sections	.debug_frame
+  19              		.global	bme280
+  20              		.data
+  21              		.align	2
+  22              		.type	bme280, %object
+  23              		.size	bme280, 64
+  24              	bme280:
+  25 0000 00       		.byte	0
+  26 0001 77       		.byte	119
+  27 0002 0A       		.byte	10
+  28 0003 03       		.byte	3
+  29 0004 0000     		.space	2
+  30 0006 01       		.byte	1
+  31 0007 01       		.byte	1
+  32 0008 01       		.byte	1
+  33 0009 00       		.space	1
+  34 000a 00000000 		.space	36
+  34      00000000 
+  34      00000000 
+  34      00000000 
+  34      00000000 
+  35 002e 0000     		.space	2
+  36 0030 00000000 		.word	0
+  37 0034 003C1CC6 		.word	-971228160
+  38 0038 003C1CC6 		.word	-971228160
+  39 003c 003C1CC6 		.word	-971228160
+  40              		.section	.text.BME280_start,"ax",%progbits
+  41              		.align	2
+  42              		.global	BME280_start
+  43              		.thumb
+  44              		.thumb_func
+  45              		.type	BME280_start, %function
+  46              	BME280_start:
+  47              	.LFB63:
+  48              		.file 1 "BME280.c"
+   1:BME280.c      **** /******************************************************************************
+   2:BME280.c      **** SparkFunBME280.cpp
+   3:BME280.c      **** BME280 Arduino and Teensy Driver
+   4:BME280.c      **** Marshall Taylor @ SparkFun Electronics
+   5:BME280.c      **** May 20, 2015
+ARM GAS  C:\Users\mame\AppData\Local\Temp\ccQcqcr0.s 			page 2
+
+
+   6:BME280.c      **** https://github.com/sparkfun/BME280_Breakout
+   7:BME280.c      **** 
+   8:BME280.c      **** Resources:
+   9:BME280.c      **** Uses Wire.h for i2c operation
+  10:BME280.c      **** Uses SPI.h for SPI operation
+  11:BME280.c      **** 
+  12:BME280.c      **** Development environment specifics:
+  13:BME280.c      **** Arduino IDE 1.6.4
+  14:BME280.c      **** Teensy loader 1.23
+  15:BME280.c      **** 
+  16:BME280.c      **** This code is released under the [MIT License](http://opensource.org/licenses/MIT).
+  17:BME280.c      **** Please review the LICENSE.md file included with this example. If you have any questions 
+  18:BME280.c      **** or concerns with licensing, please contact techsupport@sparkfun.com.
+  19:BME280.c      **** Distributed as-is; no warranty is given.
+  20:BME280.c      **** ******************************************************************************/
+  21:BME280.c      **** //See SparkFunBME280.h for additional topology notes.
+  22:BME280.c      **** 
+  23:BME280.c      **** #include "BME280.h"
+  24:BME280.c      **** #include <math.h>
+  25:BME280.c      **** 
+  26:BME280.c      **** 
+  27:BME280.c      **** //****************************************************************************//
+  28:BME280.c      **** //
+  29:BME280.c      **** //  Settings and configuration
+  30:BME280.c      **** //
+  31:BME280.c      **** //****************************************************************************//
+  32:BME280.c      **** 
+  33:BME280.c      **** //Construct with these default settings if nothing is specified
+  34:BME280.c      **** BME280 bme280 = {
+  35:BME280.c      ****     .settings = {
+  36:BME280.c      ****         //Select interface mode
+  37:BME280.c      ****         .commInterface  = BME280_I2C_MODE,
+  38:BME280.c      ****     	//Select address for I2C.  Does nothing for SPI            
+  39:BME280.c      ****         .I2CAddress     = 0x77,
+  40:BME280.c      ****     	//Select CS pin for SPI.  Does nothing for I2C            
+  41:BME280.c      ****         .chipSelectPin  = 10,
+  42:BME280.c      ****         .runMode        = 3,
+  43:BME280.c      ****         .tempOverSample = 1,
+  44:BME280.c      ****         .pressOverSample= 1,
+  45:BME280.c      ****         .humidOverSample= 1
+  46:BME280.c      ****         },
+  47:BME280.c      ****     .calibration = {},
+  48:BME280.c      ****     .t_fine = 0,
+  49:BME280.c      ****     .temp_C     = -9999,
+  50:BME280.c      ****     .press_Pa   = -9999,
+  51:BME280.c      ****     .RH         = -9999
+  52:BME280.c      **** };
+  53:BME280.c      **** 
+  54:BME280.c      **** void BME280_start() {
+  49              		.loc 1 54 0
+  50              		.cfi_startproc
+  51              		@ args = 0, pretend = 0, frame = 0
+  52              		@ frame_needed = 1, uses_anonymous_args = 0
+  53 0000 80B5     		push	{r7, lr}
+  54              		.cfi_def_cfa_offset 8
+  55              		.cfi_offset 7, -8
+  56              		.cfi_offset 14, -4
+ARM GAS  C:\Users\mame\AppData\Local\Temp\ccQcqcr0.s 			page 3
+
+
+  57 0002 00AF     		add	r7, sp, #0
+  58              		.cfi_def_cfa_register 7
+  55:BME280.c      ****     I2C_Start();
+  59              		.loc 1 55 0
+  60 0004 FFF7FEFF 		bl	I2C_Start
+  56:BME280.c      ****     I2C_Sleep();
+  61              		.loc 1 56 0
+  62 0008 FFF7FEFF 		bl	I2C_Sleep
+  57:BME280.c      **** }
+  63              		.loc 1 57 0
+  64 000c 00BF     		nop
+  65 000e 80BD     		pop	{r7, pc}
+  66              		.cfi_endproc
+  67              	.LFE63:
+  68              		.size	BME280_start, .-BME280_start
+  69              		.section	.text.BME280_stop,"ax",%progbits
+  70              		.align	2
+  71              		.global	BME280_stop
+  72              		.thumb
+  73              		.thumb_func
+  74              		.type	BME280_stop, %function
+  75              	BME280_stop:
+  76              	.LFB64:
+  58:BME280.c      **** 
+  59:BME280.c      **** void BME280_stop() {
+  77              		.loc 1 59 0
+  78              		.cfi_startproc
+  79              		@ args = 0, pretend = 0, frame = 0
+  80              		@ frame_needed = 1, uses_anonymous_args = 0
+  81 0000 80B5     		push	{r7, lr}
+  82              		.cfi_def_cfa_offset 8
+  83              		.cfi_offset 7, -8
+  84              		.cfi_offset 14, -4
+  85 0002 00AF     		add	r7, sp, #0
+  86              		.cfi_def_cfa_register 7
+  60:BME280.c      ****     I2C_Stop();
+  87              		.loc 1 60 0
+  88 0004 FFF7FEFF 		bl	I2C_Stop
+  61:BME280.c      **** }
+  89              		.loc 1 61 0
+  90 0008 00BF     		nop
+  91 000a 80BD     		pop	{r7, pc}
+  92              		.cfi_endproc
+  93              	.LFE64:
+  94              		.size	BME280_stop, .-BME280_stop
+  95              		.section	.text.BME280_init,"ax",%progbits
+  96              		.align	2
+  97              		.global	BME280_init
+  98              		.thumb
+  99              		.thumb_func
+ 100              		.type	BME280_init, %function
+ 101              	BME280_init:
+ 102              	.LFB65:
+  62:BME280.c      **** 
+  63:BME280.c      **** //****************************************************************************//
+  64:BME280.c      **** //
+  65:BME280.c      **** //  Configuration section
+ARM GAS  C:\Users\mame\AppData\Local\Temp\ccQcqcr0.s 			page 4
+
+
+  66:BME280.c      **** //
+  67:BME280.c      **** //  This uses the stored SensorSettings to start the IMU
+  68:BME280.c      **** //  Use statements such as "mySensor.settings.commInterface = SPI_MODE;" to 
+  69:BME280.c      **** //  configure before calling .begin();
+  70:BME280.c      **** //
+  71:BME280.c      **** //****************************************************************************//
+  72:BME280.c      **** uint8_t BME280_init()
+  73:BME280.c      **** {
+ 103              		.loc 1 73 0
+ 104              		.cfi_startproc
+ 105              		@ args = 0, pretend = 0, frame = 8
+ 106              		@ frame_needed = 1, uses_anonymous_args = 0
+ 107 0000 90B5     		push	{r4, r7, lr}
+ 108              		.cfi_def_cfa_offset 12
+ 109              		.cfi_offset 4, -12
+ 110              		.cfi_offset 7, -8
+ 111              		.cfi_offset 14, -4
+ 112 0002 83B0     		sub	sp, sp, #12
+ 113              		.cfi_def_cfa_offset 24
+ 114 0004 00AF     		add	r7, sp, #0
+ 115              		.cfi_def_cfa_register 7
+  74:BME280.c      **** 	//Check the settings structure values to determine how to setup the device
+  75:BME280.c      **** 	uint8_t data_to_write = 0, device_address;  //Temporary variable
+ 116              		.loc 1 75 0
+ 117 0006 0023     		movs	r3, #0
+ 118 0008 FB71     		strb	r3, [r7, #7]
+  76:BME280.c      **** 	I2C_Start();
+ 119              		.loc 1 76 0
+ 120 000a FFF7FEFF 		bl	I2C_Start
+  77:BME280.c      ****     I2C_Sleep();
+ 121              		.loc 1 77 0
+ 122 000e FFF7FEFF 		bl	I2C_Sleep
+  78:BME280.c      ****     
+  79:BME280.c      **** 	//Reading all compensation data, range 0x88:A1, 0xE1:E7
+  80:BME280.c      **** 	bme280.calibration.dig_T1 = ((uint16_t)((BME280_readRegister(BME280_DIG_T1_MSB_REG) << 8) + BME280
+ 123              		.loc 1 80 0
+ 124 0012 8920     		movs	r0, #137
+ 125 0014 FFF7FEFF 		bl	BME280_readRegister
+ 126 0018 0346     		mov	r3, r0
+ 127 001a 9BB2     		uxth	r3, r3
+ 128 001c 1B02     		lsls	r3, r3, #8
+ 129 001e 9CB2     		uxth	r4, r3
+ 130 0020 8820     		movs	r0, #136
+ 131 0022 FFF7FEFF 		bl	BME280_readRegister
+ 132 0026 0346     		mov	r3, r0
+ 133 0028 9BB2     		uxth	r3, r3
+ 134 002a 2344     		add	r3, r3, r4
+ 135 002c 9AB2     		uxth	r2, r3
+ 136 002e AE4B     		ldr	r3, .L5
+ 137 0030 5A81     		strh	r2, [r3, #10]	@ movhi
+  81:BME280.c      **** 	bme280.calibration.dig_T2 = ((int16_t)((BME280_readRegister(BME280_DIG_T2_MSB_REG) << 8) + BME280_
+ 138              		.loc 1 81 0
+ 139 0032 8B20     		movs	r0, #139
+ 140 0034 FFF7FEFF 		bl	BME280_readRegister
+ 141 0038 0346     		mov	r3, r0
+ 142 003a 9BB2     		uxth	r3, r3
+ 143 003c 1B02     		lsls	r3, r3, #8
+ARM GAS  C:\Users\mame\AppData\Local\Temp\ccQcqcr0.s 			page 5
+
+
+ 144 003e 9CB2     		uxth	r4, r3
+ 145 0040 8A20     		movs	r0, #138
+ 146 0042 FFF7FEFF 		bl	BME280_readRegister
+ 147 0046 0346     		mov	r3, r0
+ 148 0048 9BB2     		uxth	r3, r3
+ 149 004a 2344     		add	r3, r3, r4
+ 150 004c 9BB2     		uxth	r3, r3
+ 151 004e 1AB2     		sxth	r2, r3
+ 152 0050 A54B     		ldr	r3, .L5
+ 153 0052 9A81     		strh	r2, [r3, #12]	@ movhi
+  82:BME280.c      **** 	bme280.calibration.dig_T3 = ((int16_t)((BME280_readRegister(BME280_DIG_T3_MSB_REG) << 8) + BME280_
+ 154              		.loc 1 82 0
+ 155 0054 8D20     		movs	r0, #141
+ 156 0056 FFF7FEFF 		bl	BME280_readRegister
+ 157 005a 0346     		mov	r3, r0
+ 158 005c 9BB2     		uxth	r3, r3
+ 159 005e 1B02     		lsls	r3, r3, #8
+ 160 0060 9CB2     		uxth	r4, r3
+ 161 0062 8C20     		movs	r0, #140
+ 162 0064 FFF7FEFF 		bl	BME280_readRegister
+ 163 0068 0346     		mov	r3, r0
+ 164 006a 9BB2     		uxth	r3, r3
+ 165 006c 2344     		add	r3, r3, r4
+ 166 006e 9BB2     		uxth	r3, r3
+ 167 0070 1AB2     		sxth	r2, r3
+ 168 0072 9D4B     		ldr	r3, .L5
+ 169 0074 DA81     		strh	r2, [r3, #14]	@ movhi
+  83:BME280.c      **** 
+  84:BME280.c      **** 	bme280.calibration.dig_P1 = ((uint16_t)((BME280_readRegister(BME280_DIG_P1_MSB_REG) << 8) + BME280
+ 170              		.loc 1 84 0
+ 171 0076 8F20     		movs	r0, #143
+ 172 0078 FFF7FEFF 		bl	BME280_readRegister
+ 173 007c 0346     		mov	r3, r0
+ 174 007e 9BB2     		uxth	r3, r3
+ 175 0080 1B02     		lsls	r3, r3, #8
+ 176 0082 9CB2     		uxth	r4, r3
+ 177 0084 8E20     		movs	r0, #142
+ 178 0086 FFF7FEFF 		bl	BME280_readRegister
+ 179 008a 0346     		mov	r3, r0
+ 180 008c 9BB2     		uxth	r3, r3
+ 181 008e 2344     		add	r3, r3, r4
+ 182 0090 9AB2     		uxth	r2, r3
+ 183 0092 954B     		ldr	r3, .L5
+ 184 0094 1A82     		strh	r2, [r3, #16]	@ movhi
+  85:BME280.c      **** 	bme280.calibration.dig_P2 = ((int16_t)((BME280_readRegister(BME280_DIG_P2_MSB_REG) << 8) + BME280_
+ 185              		.loc 1 85 0
+ 186 0096 9120     		movs	r0, #145
+ 187 0098 FFF7FEFF 		bl	BME280_readRegister
+ 188 009c 0346     		mov	r3, r0
+ 189 009e 9BB2     		uxth	r3, r3
+ 190 00a0 1B02     		lsls	r3, r3, #8
+ 191 00a2 9CB2     		uxth	r4, r3
+ 192 00a4 9020     		movs	r0, #144
+ 193 00a6 FFF7FEFF 		bl	BME280_readRegister
+ 194 00aa 0346     		mov	r3, r0
+ 195 00ac 9BB2     		uxth	r3, r3
+ 196 00ae 2344     		add	r3, r3, r4
+ARM GAS  C:\Users\mame\AppData\Local\Temp\ccQcqcr0.s 			page 6
+
+
+ 197 00b0 9BB2     		uxth	r3, r3
+ 198 00b2 1AB2     		sxth	r2, r3
+ 199 00b4 8C4B     		ldr	r3, .L5
+ 200 00b6 5A82     		strh	r2, [r3, #18]	@ movhi
+  86:BME280.c      **** 	bme280.calibration.dig_P3 = ((int16_t)((BME280_readRegister(BME280_DIG_P3_MSB_REG) << 8) + BME280_
+ 201              		.loc 1 86 0
+ 202 00b8 9320     		movs	r0, #147
+ 203 00ba FFF7FEFF 		bl	BME280_readRegister
+ 204 00be 0346     		mov	r3, r0
+ 205 00c0 9BB2     		uxth	r3, r3
+ 206 00c2 1B02     		lsls	r3, r3, #8
+ 207 00c4 9CB2     		uxth	r4, r3
+ 208 00c6 9220     		movs	r0, #146
+ 209 00c8 FFF7FEFF 		bl	BME280_readRegister
+ 210 00cc 0346     		mov	r3, r0
+ 211 00ce 9BB2     		uxth	r3, r3
+ 212 00d0 2344     		add	r3, r3, r4
+ 213 00d2 9BB2     		uxth	r3, r3
+ 214 00d4 1AB2     		sxth	r2, r3
+ 215 00d6 844B     		ldr	r3, .L5
+ 216 00d8 9A82     		strh	r2, [r3, #20]	@ movhi
+  87:BME280.c      **** 	bme280.calibration.dig_P4 = ((int16_t)((BME280_readRegister(BME280_DIG_P4_MSB_REG) << 8) + BME280_
+ 217              		.loc 1 87 0
+ 218 00da 9520     		movs	r0, #149
+ 219 00dc FFF7FEFF 		bl	BME280_readRegister
+ 220 00e0 0346     		mov	r3, r0
+ 221 00e2 9BB2     		uxth	r3, r3
+ 222 00e4 1B02     		lsls	r3, r3, #8
+ 223 00e6 9CB2     		uxth	r4, r3
+ 224 00e8 9420     		movs	r0, #148
+ 225 00ea FFF7FEFF 		bl	BME280_readRegister
+ 226 00ee 0346     		mov	r3, r0
+ 227 00f0 9BB2     		uxth	r3, r3
+ 228 00f2 2344     		add	r3, r3, r4
+ 229 00f4 9BB2     		uxth	r3, r3
+ 230 00f6 1AB2     		sxth	r2, r3
+ 231 00f8 7B4B     		ldr	r3, .L5
+ 232 00fa DA82     		strh	r2, [r3, #22]	@ movhi
+  88:BME280.c      **** 	bme280.calibration.dig_P5 = ((int16_t)((BME280_readRegister(BME280_DIG_P5_MSB_REG) << 8) + BME280_
+ 233              		.loc 1 88 0
+ 234 00fc 9720     		movs	r0, #151
+ 235 00fe FFF7FEFF 		bl	BME280_readRegister
+ 236 0102 0346     		mov	r3, r0
+ 237 0104 9BB2     		uxth	r3, r3
+ 238 0106 1B02     		lsls	r3, r3, #8
+ 239 0108 9CB2     		uxth	r4, r3
+ 240 010a 9620     		movs	r0, #150
+ 241 010c FFF7FEFF 		bl	BME280_readRegister
+ 242 0110 0346     		mov	r3, r0
+ 243 0112 9BB2     		uxth	r3, r3
+ 244 0114 2344     		add	r3, r3, r4
+ 245 0116 9BB2     		uxth	r3, r3
+ 246 0118 1AB2     		sxth	r2, r3
+ 247 011a 734B     		ldr	r3, .L5
+ 248 011c 1A83     		strh	r2, [r3, #24]	@ movhi
+  89:BME280.c      **** 	bme280.calibration.dig_P6 = ((int16_t)((BME280_readRegister(BME280_DIG_P6_MSB_REG) << 8) + BME280_
+ 249              		.loc 1 89 0
+ARM GAS  C:\Users\mame\AppData\Local\Temp\ccQcqcr0.s 			page 7
+
+
+ 250 011e 9920     		movs	r0, #153
+ 251 0120 FFF7FEFF 		bl	BME280_readRegister
+ 252 0124 0346     		mov	r3, r0
+ 253 0126 9BB2     		uxth	r3, r3
+ 254 0128 1B02     		lsls	r3, r3, #8
+ 255 012a 9CB2     		uxth	r4, r3
+ 256 012c 9820     		movs	r0, #152
+ 257 012e FFF7FEFF 		bl	BME280_readRegister
+ 258 0132 0346     		mov	r3, r0
+ 259 0134 9BB2     		uxth	r3, r3
+ 260 0136 2344     		add	r3, r3, r4
+ 261 0138 9BB2     		uxth	r3, r3
+ 262 013a 1AB2     		sxth	r2, r3
+ 263 013c 6A4B     		ldr	r3, .L5
+ 264 013e 5A83     		strh	r2, [r3, #26]	@ movhi
+  90:BME280.c      **** 	bme280.calibration.dig_P7 = ((int16_t)((BME280_readRegister(BME280_DIG_P7_MSB_REG) << 8) + BME280_
+ 265              		.loc 1 90 0
+ 266 0140 9B20     		movs	r0, #155
+ 267 0142 FFF7FEFF 		bl	BME280_readRegister
+ 268 0146 0346     		mov	r3, r0
+ 269 0148 9BB2     		uxth	r3, r3
+ 270 014a 1B02     		lsls	r3, r3, #8
+ 271 014c 9CB2     		uxth	r4, r3
+ 272 014e 9A20     		movs	r0, #154
+ 273 0150 FFF7FEFF 		bl	BME280_readRegister
+ 274 0154 0346     		mov	r3, r0
+ 275 0156 9BB2     		uxth	r3, r3
+ 276 0158 2344     		add	r3, r3, r4
+ 277 015a 9BB2     		uxth	r3, r3
+ 278 015c 1AB2     		sxth	r2, r3
+ 279 015e 624B     		ldr	r3, .L5
+ 280 0160 9A83     		strh	r2, [r3, #28]	@ movhi
+  91:BME280.c      **** 	bme280.calibration.dig_P8 = ((int16_t)((BME280_readRegister(BME280_DIG_P8_MSB_REG) << 8) + BME280_
+ 281              		.loc 1 91 0
+ 282 0162 9D20     		movs	r0, #157
+ 283 0164 FFF7FEFF 		bl	BME280_readRegister
+ 284 0168 0346     		mov	r3, r0
+ 285 016a 9BB2     		uxth	r3, r3
+ 286 016c 1B02     		lsls	r3, r3, #8
+ 287 016e 9CB2     		uxth	r4, r3
+ 288 0170 9C20     		movs	r0, #156
+ 289 0172 FFF7FEFF 		bl	BME280_readRegister
+ 290 0176 0346     		mov	r3, r0
+ 291 0178 9BB2     		uxth	r3, r3
+ 292 017a 2344     		add	r3, r3, r4
+ 293 017c 9BB2     		uxth	r3, r3
+ 294 017e 1AB2     		sxth	r2, r3
+ 295 0180 594B     		ldr	r3, .L5
+ 296 0182 DA83     		strh	r2, [r3, #30]	@ movhi
+  92:BME280.c      **** 	bme280.calibration.dig_P9 = ((int16_t)((BME280_readRegister(BME280_DIG_P9_MSB_REG) << 8) + BME280_
+ 297              		.loc 1 92 0
+ 298 0184 9F20     		movs	r0, #159
+ 299 0186 FFF7FEFF 		bl	BME280_readRegister
+ 300 018a 0346     		mov	r3, r0
+ 301 018c 9BB2     		uxth	r3, r3
+ 302 018e 1B02     		lsls	r3, r3, #8
+ 303 0190 9CB2     		uxth	r4, r3
+ARM GAS  C:\Users\mame\AppData\Local\Temp\ccQcqcr0.s 			page 8
+
+
+ 304 0192 9E20     		movs	r0, #158
+ 305 0194 FFF7FEFF 		bl	BME280_readRegister
+ 306 0198 0346     		mov	r3, r0
+ 307 019a 9BB2     		uxth	r3, r3
+ 308 019c 2344     		add	r3, r3, r4
+ 309 019e 9BB2     		uxth	r3, r3
+ 310 01a0 1AB2     		sxth	r2, r3
+ 311 01a2 514B     		ldr	r3, .L5
+ 312 01a4 1A84     		strh	r2, [r3, #32]	@ movhi
+  93:BME280.c      **** 
+  94:BME280.c      **** 	bme280.calibration.dig_H1 = ((uint8_t)(BME280_readRegister(BME280_DIG_H1_REG)));
+ 313              		.loc 1 94 0
+ 314 01a6 A120     		movs	r0, #161
+ 315 01a8 FFF7FEFF 		bl	BME280_readRegister
+ 316 01ac 0346     		mov	r3, r0
+ 317 01ae 1A46     		mov	r2, r3
+ 318 01b0 4D4B     		ldr	r3, .L5
+ 319 01b2 83F82220 		strb	r2, [r3, #34]
+  95:BME280.c      **** 	bme280.calibration.dig_H2 = ((int16_t)((BME280_readRegister(BME280_DIG_H2_MSB_REG) << 8) + BME280_
+ 320              		.loc 1 95 0
+ 321 01b6 E220     		movs	r0, #226
+ 322 01b8 FFF7FEFF 		bl	BME280_readRegister
+ 323 01bc 0346     		mov	r3, r0
+ 324 01be 9BB2     		uxth	r3, r3
+ 325 01c0 1B02     		lsls	r3, r3, #8
+ 326 01c2 9CB2     		uxth	r4, r3
+ 327 01c4 E120     		movs	r0, #225
+ 328 01c6 FFF7FEFF 		bl	BME280_readRegister
+ 329 01ca 0346     		mov	r3, r0
+ 330 01cc 9BB2     		uxth	r3, r3
+ 331 01ce 2344     		add	r3, r3, r4
+ 332 01d0 9BB2     		uxth	r3, r3
+ 333 01d2 1AB2     		sxth	r2, r3
+ 334 01d4 444B     		ldr	r3, .L5
+ 335 01d6 9A84     		strh	r2, [r3, #36]	@ movhi
+  96:BME280.c      **** 	bme280.calibration.dig_H3 = ((uint8_t)(BME280_readRegister(BME280_DIG_H3_REG)));
+ 336              		.loc 1 96 0
+ 337 01d8 E320     		movs	r0, #227
+ 338 01da FFF7FEFF 		bl	BME280_readRegister
+ 339 01de 0346     		mov	r3, r0
+ 340 01e0 1A46     		mov	r2, r3
+ 341 01e2 414B     		ldr	r3, .L5
+ 342 01e4 83F82620 		strb	r2, [r3, #38]
+  97:BME280.c      **** 	bme280.calibration.dig_H4 = ((int16_t)((BME280_readRegister(BME280_DIG_H4_MSB_REG) << 4) + (BME280
+ 343              		.loc 1 97 0
+ 344 01e8 E420     		movs	r0, #228
+ 345 01ea FFF7FEFF 		bl	BME280_readRegister
+ 346 01ee 0346     		mov	r3, r0
+ 347 01f0 9BB2     		uxth	r3, r3
+ 348 01f2 1B01     		lsls	r3, r3, #4
+ 349 01f4 9CB2     		uxth	r4, r3
+ 350 01f6 E520     		movs	r0, #229
+ 351 01f8 FFF7FEFF 		bl	BME280_readRegister
+ 352 01fc 0346     		mov	r3, r0
+ 353 01fe 9BB2     		uxth	r3, r3
+ 354 0200 03F00F03 		and	r3, r3, #15
+ 355 0204 9BB2     		uxth	r3, r3
+ARM GAS  C:\Users\mame\AppData\Local\Temp\ccQcqcr0.s 			page 9
+
+
+ 356 0206 2344     		add	r3, r3, r4
+ 357 0208 9BB2     		uxth	r3, r3
+ 358 020a 1AB2     		sxth	r2, r3
+ 359 020c 364B     		ldr	r3, .L5
+ 360 020e 1A85     		strh	r2, [r3, #40]	@ movhi
+  98:BME280.c      **** 	bme280.calibration.dig_H5 = ((int16_t)((BME280_readRegister(BME280_DIG_H5_MSB_REG) << 4) + ((BME28
+ 361              		.loc 1 98 0
+ 362 0210 E620     		movs	r0, #230
+ 363 0212 FFF7FEFF 		bl	BME280_readRegister
+ 364 0216 0346     		mov	r3, r0
+ 365 0218 9BB2     		uxth	r3, r3
+ 366 021a 1B01     		lsls	r3, r3, #4
+ 367 021c 9CB2     		uxth	r4, r3
+ 368 021e E520     		movs	r0, #229
+ 369 0220 FFF7FEFF 		bl	BME280_readRegister
+ 370 0224 0346     		mov	r3, r0
+ 371 0226 1B09     		lsrs	r3, r3, #4
+ 372 0228 DBB2     		uxtb	r3, r3
+ 373 022a 9BB2     		uxth	r3, r3
+ 374 022c 03F00F03 		and	r3, r3, #15
+ 375 0230 9BB2     		uxth	r3, r3
+ 376 0232 2344     		add	r3, r3, r4
+ 377 0234 9BB2     		uxth	r3, r3
+ 378 0236 1AB2     		sxth	r2, r3
+ 379 0238 2B4B     		ldr	r3, .L5
+ 380 023a 5A85     		strh	r2, [r3, #42]	@ movhi
+  99:BME280.c      **** 	bme280.calibration.dig_H6 = ((uint8_t)BME280_readRegister(BME280_DIG_H6_REG));
+ 381              		.loc 1 99 0
+ 382 023c E720     		movs	r0, #231
+ 383 023e FFF7FEFF 		bl	BME280_readRegister
+ 384 0242 0346     		mov	r3, r0
+ 385 0244 1A46     		mov	r2, r3
+ 386 0246 284B     		ldr	r3, .L5
+ 387 0248 83F82C20 		strb	r2, [r3, #44]
+ 100:BME280.c      **** 
+ 101:BME280.c      **** 	//Set the oversampling control words.
+ 102:BME280.c      **** 	//config will only be writeable in sleep mode, so first insure that.
+ 103:BME280.c      **** 	BME280_writeRegister(BME280_CTRL_MEAS_REG, 0x00);
+ 388              		.loc 1 103 0
+ 389 024c 0021     		movs	r1, #0
+ 390 024e F420     		movs	r0, #244
+ 391 0250 FFF7FEFF 		bl	BME280_writeRegister
+ 104:BME280.c      **** 	
+ 105:BME280.c      **** 	//Set the config word
+ 106:BME280.c      **** 	data_to_write = (bme280.settings.tStandby << 0x5) & 0xE0;
+ 392              		.loc 1 106 0
+ 393 0254 244B     		ldr	r3, .L5
+ 394 0256 1B79     		ldrb	r3, [r3, #4]	@ zero_extendqisi2
+ 395 0258 5B01     		lsls	r3, r3, #5
+ 396 025a FB71     		strb	r3, [r7, #7]
+ 107:BME280.c      **** 	data_to_write |= (bme280.settings.filter << 0x02) & 0x1C;
+ 397              		.loc 1 107 0
+ 398 025c 224B     		ldr	r3, .L5
+ 399 025e 5B79     		ldrb	r3, [r3, #5]	@ zero_extendqisi2
+ 400 0260 9B00     		lsls	r3, r3, #2
+ 401 0262 5BB2     		sxtb	r3, r3
+ 402 0264 03F01C03 		and	r3, r3, #28
+ARM GAS  C:\Users\mame\AppData\Local\Temp\ccQcqcr0.s 			page 10
+
+
+ 403 0268 5AB2     		sxtb	r2, r3
+ 404 026a 97F90730 		ldrsb	r3, [r7, #7]
+ 405 026e 1343     		orrs	r3, r3, r2
+ 406 0270 5BB2     		sxtb	r3, r3
+ 407 0272 FB71     		strb	r3, [r7, #7]
+ 108:BME280.c      **** 	BME280_writeRegister(BME280_CONFIG_REG, data_to_write);
+ 408              		.loc 1 108 0
+ 409 0274 FB79     		ldrb	r3, [r7, #7]	@ zero_extendqisi2
+ 410 0276 1946     		mov	r1, r3
+ 411 0278 F520     		movs	r0, #245
+ 412 027a FFF7FEFF 		bl	BME280_writeRegister
+ 109:BME280.c      **** 	
+ 110:BME280.c      **** 	//Set ctrl_hum first, then ctrl_meas to activate ctrl_hum
+ 111:BME280.c      **** 	data_to_write = bme280.settings.humidOverSample & 0x07; //all other bits can be ignored
+ 413              		.loc 1 111 0
+ 414 027e 1A4B     		ldr	r3, .L5
+ 415 0280 1B7A     		ldrb	r3, [r3, #8]	@ zero_extendqisi2
+ 416 0282 03F00703 		and	r3, r3, #7
+ 417 0286 FB71     		strb	r3, [r7, #7]
+ 112:BME280.c      **** 	BME280_writeRegister(BME280_CTRL_HUMIDITY_REG, data_to_write);
+ 418              		.loc 1 112 0
+ 419 0288 FB79     		ldrb	r3, [r7, #7]	@ zero_extendqisi2
+ 420 028a 1946     		mov	r1, r3
+ 421 028c F220     		movs	r0, #242
+ 422 028e FFF7FEFF 		bl	BME280_writeRegister
+ 113:BME280.c      **** 	
+ 114:BME280.c      **** 	//set ctrl_meas
+ 115:BME280.c      **** 	//First, set temp oversampling
+ 116:BME280.c      **** 	data_to_write = (bme280.settings.tempOverSample << 0x05) & 0xE0;
+ 423              		.loc 1 116 0
+ 424 0292 154B     		ldr	r3, .L5
+ 425 0294 9B79     		ldrb	r3, [r3, #6]	@ zero_extendqisi2
+ 426 0296 5B01     		lsls	r3, r3, #5
+ 427 0298 FB71     		strb	r3, [r7, #7]
+ 117:BME280.c      **** 	//Next, pressure oversampling
+ 118:BME280.c      **** 	data_to_write |= (bme280.settings.pressOverSample << 0x02) & 0x1C;
+ 428              		.loc 1 118 0
+ 429 029a 134B     		ldr	r3, .L5
+ 430 029c DB79     		ldrb	r3, [r3, #7]	@ zero_extendqisi2
+ 431 029e 9B00     		lsls	r3, r3, #2
+ 432 02a0 5BB2     		sxtb	r3, r3
+ 433 02a2 03F01C03 		and	r3, r3, #28
+ 434 02a6 5AB2     		sxtb	r2, r3
+ 435 02a8 97F90730 		ldrsb	r3, [r7, #7]
+ 436 02ac 1343     		orrs	r3, r3, r2
+ 437 02ae 5BB2     		sxtb	r3, r3
+ 438 02b0 FB71     		strb	r3, [r7, #7]
+ 119:BME280.c      **** 	//Last, set mode
+ 120:BME280.c      **** 	data_to_write |= (bme280.settings.runMode) & 0x03;
+ 439              		.loc 1 120 0
+ 440 02b2 0D4B     		ldr	r3, .L5
+ 441 02b4 DB78     		ldrb	r3, [r3, #3]	@ zero_extendqisi2
+ 442 02b6 5BB2     		sxtb	r3, r3
+ 443 02b8 03F00303 		and	r3, r3, #3
+ 444 02bc 5AB2     		sxtb	r2, r3
+ 445 02be 97F90730 		ldrsb	r3, [r7, #7]
+ 446 02c2 1343     		orrs	r3, r3, r2
+ARM GAS  C:\Users\mame\AppData\Local\Temp\ccQcqcr0.s 			page 11
+
+
+ 447 02c4 5BB2     		sxtb	r3, r3
+ 448 02c6 FB71     		strb	r3, [r7, #7]
+ 121:BME280.c      **** 	//Load the byte
+ 122:BME280.c      **** 	BME280_writeRegister(BME280_CTRL_MEAS_REG, data_to_write);
+ 449              		.loc 1 122 0
+ 450 02c8 FB79     		ldrb	r3, [r7, #7]	@ zero_extendqisi2
+ 451 02ca 1946     		mov	r1, r3
+ 452 02cc F420     		movs	r0, #244
+ 453 02ce FFF7FEFF 		bl	BME280_writeRegister
+ 123:BME280.c      **** 	
+ 124:BME280.c      ****     // dataToWrite is a placeholder for the value we will return
+ 125:BME280.c      **** 	device_address = BME280_readRegister(0xD0);
+ 454              		.loc 1 125 0
+ 455 02d2 D020     		movs	r0, #208
+ 456 02d4 FFF7FEFF 		bl	BME280_readRegister
+ 457 02d8 0346     		mov	r3, r0
+ 458 02da BB71     		strb	r3, [r7, #6]
+ 126:BME280.c      ****     return device_address;
+ 459              		.loc 1 126 0
+ 460 02dc BB79     		ldrb	r3, [r7, #6]	@ zero_extendqisi2
+ 127:BME280.c      **** }
+ 461              		.loc 1 127 0
+ 462 02de 1846     		mov	r0, r3
+ 463 02e0 0C37     		adds	r7, r7, #12
+ 464              		.cfi_def_cfa_offset 12
+ 465 02e2 BD46     		mov	sp, r7
+ 466              		.cfi_def_cfa_register 13
+ 467              		@ sp needed
+ 468 02e4 90BD     		pop	{r4, r7, pc}
+ 469              	.L6:
+ 470 02e6 00BF     		.align	2
+ 471              	.L5:
+ 472 02e8 00000000 		.word	bme280
+ 473              		.cfi_endproc
+ 474              	.LFE65:
+ 475              		.size	BME280_init, .-BME280_init
+ 476              		.section	.text.BME280_reset,"ax",%progbits
+ 477              		.align	2
+ 478              		.global	BME280_reset
+ 479              		.thumb
+ 480              		.thumb_func
+ 481              		.type	BME280_reset, %function
+ 482              	BME280_reset:
+ 483              	.LFB66:
+ 128:BME280.c      **** 
+ 129:BME280.c      **** //Strictly resets.  Run BME280_init() afterwards
+ 130:BME280.c      **** void BME280_reset()
+ 131:BME280.c      **** {
+ 484              		.loc 1 131 0
+ 485              		.cfi_startproc
+ 486              		@ args = 0, pretend = 0, frame = 0
+ 487              		@ frame_needed = 1, uses_anonymous_args = 0
+ 488 0000 80B5     		push	{r7, lr}
+ 489              		.cfi_def_cfa_offset 8
+ 490              		.cfi_offset 7, -8
+ 491              		.cfi_offset 14, -4
+ 492 0002 00AF     		add	r7, sp, #0
+ARM GAS  C:\Users\mame\AppData\Local\Temp\ccQcqcr0.s 			page 12
+
+
+ 493              		.cfi_def_cfa_register 7
+ 132:BME280.c      **** 	BME280_writeRegister(BME280_RST_REG, 0xB6);
+ 494              		.loc 1 132 0
+ 495 0004 B621     		movs	r1, #182
+ 496 0006 E020     		movs	r0, #224
+ 497 0008 FFF7FEFF 		bl	BME280_writeRegister
+ 133:BME280.c      **** 	
+ 134:BME280.c      **** }
+ 498              		.loc 1 134 0
+ 499 000c 00BF     		nop
+ 500 000e 80BD     		pop	{r7, pc}
+ 501              		.cfi_endproc
+ 502              	.LFE66:
+ 503              		.size	BME280_reset, .-BME280_reset
+ 504              		.global	__aeabi_ldivmod
+ 505              		.global	__aeabi_l2f
+ 506              		.global	__aeabi_fdiv
+ 507              		.section	.text.BME280_readFloatPressure,"ax",%progbits
+ 508              		.align	2
+ 509              		.global	BME280_readFloatPressure
+ 510              		.thumb
+ 511              		.thumb_func
+ 512              		.type	BME280_readFloatPressure, %function
+ 513              	BME280_readFloatPressure:
+ 514              	.LFB67:
+ 135:BME280.c      **** 
+ 136:BME280.c      **** //****************************************************************************//
+ 137:BME280.c      **** //
+ 138:BME280.c      **** //  Pressure Section
+ 139:BME280.c      **** //
+ 140:BME280.c      **** //****************************************************************************//
+ 141:BME280.c      **** float BME280_readFloatPressure( void )
+ 142:BME280.c      **** {
+ 515              		.loc 1 142 0
+ 516              		.cfi_startproc
+ 517              		@ args = 0, pretend = 0, frame = 136
+ 518              		@ frame_needed = 1, uses_anonymous_args = 0
+ 519 0000 2DE9B04F 		push	{r4, r5, r7, r8, r9, r10, fp, lr}
+ 520              		.cfi_def_cfa_offset 32
+ 521              		.cfi_offset 4, -32
+ 522              		.cfi_offset 5, -28
+ 523              		.cfi_offset 7, -24
+ 524              		.cfi_offset 8, -20
+ 525              		.cfi_offset 9, -16
+ 526              		.cfi_offset 10, -12
+ 527              		.cfi_offset 11, -8
+ 528              		.cfi_offset 14, -4
+ 529 0004 A2B0     		sub	sp, sp, #136
+ 530              		.cfi_def_cfa_offset 168
+ 531 0006 00AF     		add	r7, sp, #0
+ 532              		.cfi_def_cfa_register 7
+ 143:BME280.c      **** 
+ 144:BME280.c      **** 	// Returns pressure in Pa as unsigned 32 bit integer in Q24.8 format (24 integer bits and 8 fracti
+ 145:BME280.c      **** 	// Output value of “24674867” represents 24674867/256 = 96386.2 Pa = 963.862 hPa
+ 146:BME280.c      **** 	int32_t adc_P = ((uint32_t)BME280_readRegister(BME280_PRESSURE_MSB_REG) << 12) | ((uint32_t)BME280
+ 533              		.loc 1 146 0
+ 534 0008 F720     		movs	r0, #247
+ARM GAS  C:\Users\mame\AppData\Local\Temp\ccQcqcr0.s 			page 13
+
+
+ 535 000a FFF7FEFF 		bl	BME280_readRegister
+ 536 000e 0346     		mov	r3, r0
+ 537 0010 1C03     		lsls	r4, r3, #12
+ 538 0012 F820     		movs	r0, #248
+ 539 0014 FFF7FEFF 		bl	BME280_readRegister
+ 540 0018 0346     		mov	r3, r0
+ 541 001a 1B01     		lsls	r3, r3, #4
+ 542 001c 1C43     		orrs	r4, r4, r3
+ 543 001e F920     		movs	r0, #249
+ 544 0020 FFF7FEFF 		bl	BME280_readRegister
+ 545 0024 0346     		mov	r3, r0
+ 546 0026 1B09     		lsrs	r3, r3, #4
+ 547 0028 DBB2     		uxtb	r3, r3
+ 548 002a 03F00F03 		and	r3, r3, #15
+ 549 002e 2343     		orrs	r3, r3, r4
+ 550 0030 C7F88430 		str	r3, [r7, #132]
+ 147:BME280.c      **** 	
+ 148:BME280.c      **** 	int64_t var1, var2, p_acc;
+ 149:BME280.c      **** 	var1 = ((int64_t) bme280.t_fine) - 128000;
+ 551              		.loc 1 149 0
+ 552 0034 644B     		ldr	r3, .L11
+ 553 0036 1B6B     		ldr	r3, [r3, #48]
+ 554 0038 4FEAE374 		asr	r4, r3, #31
+ 555 003c B3F5FA33 		subs	r3, r3, #128000
+ 556 0040 44F1FF34 		adc	r4, r4, #-1
+ 557 0044 C7E91E34 		strd	r3, [r7, #120]
+ 150:BME280.c      **** 	var2 = var1 * var1 * (int64_t) bme280.calibration.dig_P6;
+ 558              		.loc 1 150 0
+ 559 0048 FA6F     		ldr	r2, [r7, #124]
+ 560 004a BB6F     		ldr	r3, [r7, #120]
+ 561 004c 03FB02F1 		mul	r1, r3, r2
+ 562 0050 FA6F     		ldr	r2, [r7, #124]
+ 563 0052 BB6F     		ldr	r3, [r7, #120]
+ 564 0054 03FB02F3 		mul	r3, r3, r2
+ 565 0058 CC18     		adds	r4, r1, r3
+ 566 005a BA6F     		ldr	r2, [r7, #120]
+ 567 005c BB6F     		ldr	r3, [r7, #120]
+ 568 005e A2FB0301 		umull	r0, r1, r2, r3
+ 569 0062 6318     		adds	r3, r4, r1
+ 570 0064 1946     		mov	r1, r3
+ 571 0066 584B     		ldr	r3, .L11
+ 572 0068 B3F91A30 		ldrsh	r3, [r3, #26]
+ 573 006c 1BB2     		sxth	r3, r3
+ 574 006e 4FEAE374 		asr	r4, r3, #31
+ 575 0072 03FB01F5 		mul	r5, r3, r1
+ 576 0076 00FB04F2 		mul	r2, r0, r4
+ 577 007a 2A44     		add	r2, r2, r5
+ 578 007c A0FB0334 		umull	r3, r4, r0, r3
+ 579 0080 2244     		add	r2, r2, r4
+ 580 0082 1446     		mov	r4, r2
+ 581 0084 C7E91C34 		strd	r3, [r7, #112]
+ 582 0088 C7E91C34 		strd	r3, [r7, #112]
+ 151:BME280.c      **** 	var2 = var2 + ((var1 * (int64_t) bme280.calibration.dig_P5)<<17);
+ 583              		.loc 1 151 0
+ 584 008c 4E4B     		ldr	r3, .L11
+ 585 008e B3F91830 		ldrsh	r3, [r3, #24]
+ 586 0092 1BB2     		sxth	r3, r3
+ARM GAS  C:\Users\mame\AppData\Local\Temp\ccQcqcr0.s 			page 14
+
+
+ 587 0094 4FEAE374 		asr	r4, r3, #31
+ 588 0098 BA6F     		ldr	r2, [r7, #120]
+ 589 009a 04FB02F1 		mul	r1, r4, r2
+ 590 009e FA6F     		ldr	r2, [r7, #124]
+ 591 00a0 03FB02F2 		mul	r2, r3, r2
+ 592 00a4 1144     		add	r1, r1, r2
+ 593 00a6 BA6F     		ldr	r2, [r7, #120]
+ 594 00a8 A2FB0334 		umull	r3, r4, r2, r3
+ 595 00ac 0A19     		adds	r2, r1, r4
+ 596 00ae 1446     		mov	r4, r2
+ 597 00b0 4FEA4449 		lsl	r9, r4, #17
+ 598 00b4 49EAD339 		orr	r9, r9, r3, lsr #15
+ 599 00b8 4FEA4348 		lsl	r8, r3, #17
+ 600 00bc D7E91C34 		ldrd	r3, [r7, #112]
+ 601 00c0 13EB0803 		adds	r3, r3, r8
+ 602 00c4 44EB0904 		adc	r4, r4, r9
+ 603 00c8 C7E91C34 		strd	r3, [r7, #112]
+ 152:BME280.c      **** 	var2 = var2 + (((int64_t) bme280.calibration.dig_P4)<<35);
+ 604              		.loc 1 152 0
+ 605 00cc 3E4B     		ldr	r3, .L11
+ 606 00ce B3F91630 		ldrsh	r3, [r3, #22]
+ 607 00d2 1BB2     		sxth	r3, r3
+ 608 00d4 4FEAE374 		asr	r4, r3, #31
+ 609 00d8 DB00     		lsls	r3, r3, #3
+ 610 00da FB60     		str	r3, [r7, #12]
+ 611 00dc 0023     		movs	r3, #0
+ 612 00de BB60     		str	r3, [r7, #8]
+ 613 00e0 D7E91C34 		ldrd	r3, [r7, #112]
+ 614 00e4 D7E90212 		ldrd	r1, [r7, #8]
+ 615 00e8 C918     		adds	r1, r1, r3
+ 616 00ea 42EB0402 		adc	r2, r2, r4
+ 617 00ee 0B46     		mov	r3, r1
+ 618 00f0 1446     		mov	r4, r2
+ 619 00f2 C7E91C34 		strd	r3, [r7, #112]
+ 153:BME280.c      **** 	var1 = ((var1 * var1 * (int64_t) bme280.calibration.dig_P3)>>8) + ((var1 * (int64_t) bme280.calibr
+ 620              		.loc 1 153 0
+ 621 00f6 FA6F     		ldr	r2, [r7, #124]
+ 622 00f8 BB6F     		ldr	r3, [r7, #120]
+ 623 00fa 03FB02F1 		mul	r1, r3, r2
+ 624 00fe FA6F     		ldr	r2, [r7, #124]
+ 625 0100 BB6F     		ldr	r3, [r7, #120]
+ 626 0102 03FB02F3 		mul	r3, r3, r2
+ 627 0106 CC18     		adds	r4, r1, r3
+ 628 0108 BA6F     		ldr	r2, [r7, #120]
+ 629 010a BB6F     		ldr	r3, [r7, #120]
+ 630 010c A2FB0301 		umull	r0, r1, r2, r3
+ 631 0110 6318     		adds	r3, r4, r1
+ 632 0112 1946     		mov	r1, r3
+ 633 0114 2C4B     		ldr	r3, .L11
+ 634 0116 B3F91430 		ldrsh	r3, [r3, #20]
+ 635 011a 1BB2     		sxth	r3, r3
+ 636 011c 4FEAE374 		asr	r4, r3, #31
+ 637 0120 03FB01F5 		mul	r5, r3, r1
+ 638 0124 00FB04F2 		mul	r2, r0, r4
+ 639 0128 2A44     		add	r2, r2, r5
+ 640 012a A0FB0334 		umull	r3, r4, r0, r3
+ 641 012e 2244     		add	r2, r2, r4
+ARM GAS  C:\Users\mame\AppData\Local\Temp\ccQcqcr0.s 			page 15
+
+
+ 642 0130 1446     		mov	r4, r2
+ 643 0132 1A0A     		lsrs	r2, r3, #8
+ 644 0134 3A66     		str	r2, [r7, #96]
+ 645 0136 3A6E     		ldr	r2, [r7, #96]
+ 646 0138 42EA0462 		orr	r2, r2, r4, lsl #24
+ 647 013c 3A66     		str	r2, [r7, #96]
+ 648 013e 2312     		asrs	r3, r4, #8
+ 649 0140 7B66     		str	r3, [r7, #100]
+ 650 0142 214B     		ldr	r3, .L11
+ 651 0144 B3F91230 		ldrsh	r3, [r3, #18]
+ 652 0148 1BB2     		sxth	r3, r3
+ 653 014a 4FEAE374 		asr	r4, r3, #31
+ 654 014e BA6F     		ldr	r2, [r7, #120]
+ 655 0150 04FB02F1 		mul	r1, r4, r2
+ 656 0154 FA6F     		ldr	r2, [r7, #124]
+ 657 0156 03FB02F2 		mul	r2, r3, r2
+ 658 015a 1144     		add	r1, r1, r2
+ 659 015c BA6F     		ldr	r2, [r7, #120]
+ 660 015e A2FB0334 		umull	r3, r4, r2, r3
+ 661 0162 0A19     		adds	r2, r1, r4
+ 662 0164 1446     		mov	r4, r2
+ 663 0166 4FEA043B 		lsl	fp, r4, #12
+ 664 016a 4BEA135B 		orr	fp, fp, r3, lsr #20
+ 665 016e 4FEA033A 		lsl	r10, r3, #12
+ 666 0172 D7E91834 		ldrd	r3, [r7, #96]
+ 667 0176 13EB0A03 		adds	r3, r3, r10
+ 668 017a 44EB0B04 		adc	r4, r4, fp
+ 669 017e C7E91E34 		strd	r3, [r7, #120]
+ 154:BME280.c      **** 	var1 = (((((int64_t)1)<<47)+var1))*((int64_t) bme280.calibration.dig_P1)>>33;
+ 670              		.loc 1 154 0
+ 671 0182 D7E91E34 		ldrd	r3, [r7, #120]
+ 672 0186 191C     		adds	r1, r3, #0
+ 673 0188 44F50042 		adc	r2, r4, #32768
+ 674 018c 0E4B     		ldr	r3, .L11
+ 675 018e 1B8A     		ldrh	r3, [r3, #16]
+ 676 0190 9BB2     		uxth	r3, r3
+ 677 0192 4FF00004 		mov	r4, #0
+ 678 0196 03FB02F5 		mul	r5, r3, r2
+ 679 019a 01FB04F0 		mul	r0, r1, r4
+ 680 019e 2844     		add	r0, r0, r5
+ 681 01a0 A1FB0334 		umull	r3, r4, r1, r3
+ 682 01a4 0219     		adds	r2, r0, r4
+ 683 01a6 1446     		mov	r4, r2
+ 684 01a8 6210     		asrs	r2, r4, #1
+ 685 01aa 3A60     		str	r2, [r7]
+ 686 01ac E317     		asrs	r3, r4, #31
+ 687 01ae 7B60     		str	r3, [r7, #4]
+ 688 01b0 D7E90034 		ldrd	r3, [r7]
+ 689 01b4 C7E91E34 		strd	r3, [r7, #120]
+ 155:BME280.c      **** 	if (var1 == 0)
+ 690              		.loc 1 155 0
+ 691 01b8 D7E91E34 		ldrd	r3, [r7, #120]
+ 692 01bc 2343     		orrs	r3, r3, r4
+ 693 01be 05D1     		bne	.L9
+ 156:BME280.c      **** 	{
+ 157:BME280.c      **** 		return 0; // avoid exception caused by division by zero
+ 694              		.loc 1 157 0
+ARM GAS  C:\Users\mame\AppData\Local\Temp\ccQcqcr0.s 			page 16
+
+
+ 695 01c0 4FF00003 		mov	r3, #0
+ 696 01c4 F3E0     		b	.L10
+ 697              	.L12:
+ 698 01c6 00BF     		.align	2
+ 699              	.L11:
+ 700 01c8 00000000 		.word	bme280
+ 701              	.L9:
+ 158:BME280.c      **** 	}
+ 159:BME280.c      **** 	p_acc = 1048576 - adc_P;
+ 702              		.loc 1 159 0
+ 703 01cc D7F88430 		ldr	r3, [r7, #132]
+ 704 01d0 C3F58013 		rsb	r3, r3, #1048576
+ 705 01d4 4FEAE374 		asr	r4, r3, #31
+ 706 01d8 C7E91A34 		strd	r3, [r7, #104]
+ 160:BME280.c      **** 	p_acc = (((p_acc<<31) - var2)*3125)/var1;
+ 707              		.loc 1 160 0
+ 708 01dc D7E91A34 		ldrd	r3, [r7, #104]
+ 709 01e0 E207     		lsls	r2, r4, #31
+ 710 01e2 FA65     		str	r2, [r7, #92]
+ 711 01e4 FA6D     		ldr	r2, [r7, #92]
+ 712 01e6 42EA5302 		orr	r2, r2, r3, lsr #1
+ 713 01ea FA65     		str	r2, [r7, #92]
+ 714 01ec DB07     		lsls	r3, r3, #31
+ 715 01ee BB65     		str	r3, [r7, #88]
+ 716 01f0 D7E91C34 		ldrd	r3, [r7, #112]
+ 717 01f4 D7E91612 		ldrd	r1, [r7, #88]
+ 718 01f8 C91A     		subs	r1, r1, r3
+ 719 01fa 62EB0402 		sbc	r2, r2, r4
+ 720 01fe 0B46     		mov	r3, r1
+ 721 0200 1446     		mov	r4, r2
+ 722 0202 DB18     		adds	r3, r3, r3
+ 723 0204 44EB0404 		adc	r4, r4, r4
+ 724 0208 5B18     		adds	r3, r3, r1
+ 725 020a 44EB0204 		adc	r4, r4, r2
+ 726 020e A001     		lsls	r0, r4, #6
+ 727 0210 7863     		str	r0, [r7, #52]
+ 728 0212 786B     		ldr	r0, [r7, #52]
+ 729 0214 40EA9360 		orr	r0, r0, r3, lsr #26
+ 730 0218 7863     		str	r0, [r7, #52]
+ 731 021a 9801     		lsls	r0, r3, #6
+ 732 021c 3863     		str	r0, [r7, #48]
+ 733 021e D7E90C89 		ldrd	r8, [r7, #48]
+ 734 0222 18EB0308 		adds	r8, r8, r3
+ 735 0226 49EB0409 		adc	r9, r9, r4
+ 736 022a 4346     		mov	r3, r8
+ 737 022c 4C46     		mov	r4, r9
+ 738 022e A000     		lsls	r0, r4, #2
+ 739 0230 F862     		str	r0, [r7, #44]
+ 740 0232 F86A     		ldr	r0, [r7, #44]
+ 741 0234 40EA9370 		orr	r0, r0, r3, lsr #30
+ 742 0238 F862     		str	r0, [r7, #44]
+ 743 023a 9B00     		lsls	r3, r3, #2
+ 744 023c BB62     		str	r3, [r7, #40]
+ 745 023e D7E90A34 		ldrd	r3, [r7, #40]
+ 746 0242 5B18     		adds	r3, r3, r1
+ 747 0244 44EB0204 		adc	r4, r4, r2
+ 748 0248 A000     		lsls	r0, r4, #2
+ARM GAS  C:\Users\mame\AppData\Local\Temp\ccQcqcr0.s 			page 17
+
+
+ 749 024a 7862     		str	r0, [r7, #36]
+ 750 024c 786A     		ldr	r0, [r7, #36]
+ 751 024e 40EA9370 		orr	r0, r0, r3, lsr #30
+ 752 0252 7862     		str	r0, [r7, #36]
+ 753 0254 9B00     		lsls	r3, r3, #2
+ 754 0256 3B62     		str	r3, [r7, #32]
+ 755 0258 D7E90834 		ldrd	r3, [r7, #32]
+ 756 025c 13EB0108 		adds	r8, r3, r1
+ 757 0260 44EB0209 		adc	r9, r4, r2
+ 758 0264 4046     		mov	r0, r8
+ 759 0266 4946     		mov	r1, r9
+ 760 0268 D7E91E23 		ldrd	r2, [r7, #120]
+ 761 026c FFF7FEFF 		bl	__aeabi_ldivmod
+ 762 0270 0346     		mov	r3, r0
+ 763 0272 0C46     		mov	r4, r1
+ 764 0274 C7E91A34 		strd	r3, [r7, #104]
+ 161:BME280.c      **** 	var1 = (((int64_t) bme280.calibration.dig_P9) * (p_acc>>13) * (p_acc>>13)) >> 25;
+ 765              		.loc 1 161 0
+ 766 0278 4F4B     		ldr	r3, .L13
+ 767 027a B3F92030 		ldrsh	r3, [r3, #32]
+ 768 027e 18B2     		sxth	r0, r3
+ 769 0280 4FEAE071 		asr	r1, r0, #31
+ 770 0284 D7E91A34 		ldrd	r3, [r7, #104]
+ 771 0288 5A0B     		lsrs	r2, r3, #13
+ 772 028a 3A65     		str	r2, [r7, #80]
+ 773 028c 3A6D     		ldr	r2, [r7, #80]
+ 774 028e 42EAC442 		orr	r2, r2, r4, lsl #19
+ 775 0292 3A65     		str	r2, [r7, #80]
+ 776 0294 6313     		asrs	r3, r4, #13
+ 777 0296 7B65     		str	r3, [r7, #84]
+ 778 0298 D7E91445 		ldrd	r4, [r7, #80]
+ 779 029c 2346     		mov	r3, r4
+ 780 029e 03FB01F2 		mul	r2, r3, r1
+ 781 02a2 2B46     		mov	r3, r5
+ 782 02a4 00FB03F3 		mul	r3, r0, r3
+ 783 02a8 1A44     		add	r2, r2, r3
+ 784 02aa 2346     		mov	r3, r4
+ 785 02ac A0FB0334 		umull	r3, r4, r0, r3
+ 786 02b0 2244     		add	r2, r2, r4
+ 787 02b2 1446     		mov	r4, r2
+ 788 02b4 D7E91A12 		ldrd	r1, [r7, #104]
+ 789 02b8 480B     		lsrs	r0, r1, #13
+ 790 02ba B864     		str	r0, [r7, #72]
+ 791 02bc B86C     		ldr	r0, [r7, #72]
+ 792 02be 40EAC240 		orr	r0, r0, r2, lsl #19
+ 793 02c2 B864     		str	r0, [r7, #72]
+ 794 02c4 5213     		asrs	r2, r2, #13
+ 795 02c6 FA64     		str	r2, [r7, #76]
+ 796 02c8 D7E91289 		ldrd	r8, [r7, #72]
+ 797 02cc 4246     		mov	r2, r8
+ 798 02ce 02FB04F1 		mul	r1, r2, r4
+ 799 02d2 4A46     		mov	r2, r9
+ 800 02d4 03FB02F2 		mul	r2, r3, r2
+ 801 02d8 0A44     		add	r2, r2, r1
+ 802 02da 4146     		mov	r1, r8
+ 803 02dc A3FB0134 		umull	r3, r4, r3, r1
+ 804 02e0 2244     		add	r2, r2, r4
+ARM GAS  C:\Users\mame\AppData\Local\Temp\ccQcqcr0.s 			page 18
+
+
+ 805 02e2 1446     		mov	r4, r2
+ 806 02e4 5A0E     		lsrs	r2, r3, #25
+ 807 02e6 BA61     		str	r2, [r7, #24]
+ 808 02e8 BA69     		ldr	r2, [r7, #24]
+ 809 02ea 42EAC412 		orr	r2, r2, r4, lsl #7
+ 810 02ee BA61     		str	r2, [r7, #24]
+ 811 02f0 6316     		asrs	r3, r4, #25
+ 812 02f2 FB61     		str	r3, [r7, #28]
+ 813 02f4 D7E90634 		ldrd	r3, [r7, #24]
+ 814 02f8 C7E91E34 		strd	r3, [r7, #120]
+ 162:BME280.c      **** 	var2 = (((int64_t) bme280.calibration.dig_P8) * p_acc) >> 19;
+ 815              		.loc 1 162 0
+ 816 02fc 2E4B     		ldr	r3, .L13
+ 817 02fe B3F91E30 		ldrsh	r3, [r3, #30]
+ 818 0302 1BB2     		sxth	r3, r3
+ 819 0304 4FEAE374 		asr	r4, r3, #31
+ 820 0308 BA6E     		ldr	r2, [r7, #104]
+ 821 030a 04FB02F1 		mul	r1, r4, r2
+ 822 030e FA6E     		ldr	r2, [r7, #108]
+ 823 0310 03FB02F2 		mul	r2, r3, r2
+ 824 0314 0A44     		add	r2, r2, r1
+ 825 0316 B96E     		ldr	r1, [r7, #104]
+ 826 0318 A1FB0334 		umull	r3, r4, r1, r3
+ 827 031c 2244     		add	r2, r2, r4
+ 828 031e 1446     		mov	r4, r2
+ 829 0320 DA0C     		lsrs	r2, r3, #19
+ 830 0322 3A61     		str	r2, [r7, #16]
+ 831 0324 3A69     		ldr	r2, [r7, #16]
+ 832 0326 42EA4432 		orr	r2, r2, r4, lsl #13
+ 833 032a 3A61     		str	r2, [r7, #16]
+ 834 032c E314     		asrs	r3, r4, #19
+ 835 032e 7B61     		str	r3, [r7, #20]
+ 836 0330 D7E90434 		ldrd	r3, [r7, #16]
+ 837 0334 C7E91C34 		strd	r3, [r7, #112]
+ 163:BME280.c      **** 	p_acc = ((p_acc + var1 + var2) >> 8) + (((int64_t) bme280.calibration.dig_P7)<<4);
+ 838              		.loc 1 163 0
+ 839 0338 D7E91A12 		ldrd	r1, [r7, #104]
+ 840 033c D7E91E34 		ldrd	r3, [r7, #120]
+ 841 0340 C918     		adds	r1, r1, r3
+ 842 0342 42EB0402 		adc	r2, r2, r4
+ 843 0346 D7E91C34 		ldrd	r3, [r7, #112]
+ 844 034a 5B18     		adds	r3, r3, r1
+ 845 034c 44EB0204 		adc	r4, r4, r2
+ 846 0350 1A0A     		lsrs	r2, r3, #8
+ 847 0352 3A64     		str	r2, [r7, #64]
+ 848 0354 3A6C     		ldr	r2, [r7, #64]
+ 849 0356 42EA0462 		orr	r2, r2, r4, lsl #24
+ 850 035a 3A64     		str	r2, [r7, #64]
+ 851 035c 2312     		asrs	r3, r4, #8
+ 852 035e 7B64     		str	r3, [r7, #68]
+ 853 0360 154B     		ldr	r3, .L13
+ 854 0362 B3F91C30 		ldrsh	r3, [r3, #28]
+ 855 0366 1BB2     		sxth	r3, r3
+ 856 0368 4FEAE374 		asr	r4, r3, #31
+ 857 036c 2201     		lsls	r2, r4, #4
+ 858 036e FA63     		str	r2, [r7, #60]
+ 859 0370 FA6B     		ldr	r2, [r7, #60]
+ARM GAS  C:\Users\mame\AppData\Local\Temp\ccQcqcr0.s 			page 19
+
+
+ 860 0372 42EA1372 		orr	r2, r2, r3, lsr #28
+ 861 0376 FA63     		str	r2, [r7, #60]
+ 862 0378 1B01     		lsls	r3, r3, #4
+ 863 037a BB63     		str	r3, [r7, #56]
+ 864 037c D7E91034 		ldrd	r3, [r7, #64]
+ 865 0380 D7E90E12 		ldrd	r1, [r7, #56]
+ 866 0384 5B18     		adds	r3, r3, r1
+ 867 0386 44EB0204 		adc	r4, r4, r2
+ 868 038a C7E91A34 		strd	r3, [r7, #104]
+ 164:BME280.c      **** 	
+ 165:BME280.c      ****     bme280.press_Pa = (float)p_acc / 256.0;
+ 869              		.loc 1 165 0
+ 870 038e D7E91A01 		ldrd	r0, [r7, #104]
+ 871 0392 FFF7FEFF 		bl	__aeabi_l2f
+ 872 0396 0346     		mov	r3, r0
+ 873 0398 4FF08741 		mov	r1, #1132462080
+ 874 039c 1846     		mov	r0, r3
+ 875 039e FFF7FEFF 		bl	__aeabi_fdiv
+ 876 03a2 0346     		mov	r3, r0
+ 877 03a4 1A46     		mov	r2, r3
+ 878 03a6 044B     		ldr	r3, .L13
+ 879 03a8 9A63     		str	r2, [r3, #56]	@ float
+ 166:BME280.c      ****     return bme280.press_Pa;
+ 880              		.loc 1 166 0
+ 881 03aa 034B     		ldr	r3, .L13
+ 882 03ac 9B6B     		ldr	r3, [r3, #56]	@ float
+ 883              	.L10:
+ 167:BME280.c      **** 	
+ 168:BME280.c      **** }
+ 884              		.loc 1 168 0
+ 885 03ae 1846     		mov	r0, r3
+ 886 03b0 8837     		adds	r7, r7, #136
+ 887              		.cfi_def_cfa_offset 32
+ 888 03b2 BD46     		mov	sp, r7
+ 889              		.cfi_def_cfa_register 13
+ 890              		@ sp needed
+ 891 03b4 BDE8B08F 		pop	{r4, r5, r7, r8, r9, r10, fp, pc}
+ 892              	.L14:
+ 893              		.align	2
+ 894              	.L13:
+ 895 03b8 00000000 		.word	bme280
+ 896              		.cfi_endproc
+ 897              	.LFE67:
+ 898              		.size	BME280_readFloatPressure, .-BME280_readFloatPressure
+ 899              		.global	__aeabi_f2d
+ 900              		.global	__aeabi_dsub
+ 901              		.global	__aeabi_dmul
+ 902              		.global	__aeabi_d2f
+ 903              		.section	.text.BME280_readFloatAltitudeMeters,"ax",%progbits
+ 904              		.align	2
+ 905              		.global	BME280_readFloatAltitudeMeters
+ 906              		.thumb
+ 907              		.thumb_func
+ 908              		.type	BME280_readFloatAltitudeMeters, %function
+ 909              	BME280_readFloatAltitudeMeters:
+ 910              	.LFB68:
+ 169:BME280.c      **** 
+ARM GAS  C:\Users\mame\AppData\Local\Temp\ccQcqcr0.s 			page 20
+
+
+ 170:BME280.c      **** float BME280_readFloatAltitudeMeters( void )
+ 171:BME280.c      **** {
+ 911              		.loc 1 171 0
+ 912              		.cfi_startproc
+ 913              		@ args = 0, pretend = 0, frame = 8
+ 914              		@ frame_needed = 1, uses_anonymous_args = 0
+ 915 0000 90B5     		push	{r4, r7, lr}
+ 916              		.cfi_def_cfa_offset 12
+ 917              		.cfi_offset 4, -12
+ 918              		.cfi_offset 7, -8
+ 919              		.cfi_offset 14, -4
+ 920 0002 83B0     		sub	sp, sp, #12
+ 921              		.cfi_def_cfa_offset 24
+ 922 0004 00AF     		add	r7, sp, #0
+ 923              		.cfi_def_cfa_register 7
+ 172:BME280.c      **** 	float heightOutput = 0;
+ 924              		.loc 1 172 0
+ 925 0006 4FF00003 		mov	r3, #0
+ 926 000a 7B60     		str	r3, [r7, #4]	@ float
+ 173:BME280.c      **** 	
+ 174:BME280.c      **** 	heightOutput = ((float)-45846.2)*(pow(((float) BME280_readFloatPressure()/(float) P_SURFACE), 0.19
+ 927              		.loc 1 174 0
+ 928 000c FFF7FEFF 		bl	BME280_readFloatPressure
+ 929 0010 0346     		mov	r3, r0
+ 930 0012 1949     		ldr	r1, .L17+16
+ 931 0014 1846     		mov	r0, r3
+ 932 0016 FFF7FEFF 		bl	__aeabi_fdiv
+ 933 001a 0346     		mov	r3, r0
+ 934 001c 1846     		mov	r0, r3
+ 935 001e FFF7FEFF 		bl	__aeabi_f2d
+ 936 0022 11A3     		adr	r3, .L17
+ 937 0024 D3E90023 		ldrd	r2, [r3]
+ 938 0028 FFF7FEFF 		bl	pow
+ 939 002c 4FF00002 		mov	r2, #0
+ 940 0030 124B     		ldr	r3, .L17+20
+ 941 0032 FFF7FEFF 		bl	__aeabi_dsub
+ 942 0036 0346     		mov	r3, r0
+ 943 0038 0C46     		mov	r4, r1
+ 944 003a 1846     		mov	r0, r3
+ 945 003c 2146     		mov	r1, r4
+ 946 003e 0CA3     		adr	r3, .L17+8
+ 947 0040 D3E90023 		ldrd	r2, [r3]
+ 948 0044 FFF7FEFF 		bl	__aeabi_dmul
+ 949 0048 0346     		mov	r3, r0
+ 950 004a 0C46     		mov	r4, r1
+ 951 004c 1846     		mov	r0, r3
+ 952 004e 2146     		mov	r1, r4
+ 953 0050 FFF7FEFF 		bl	__aeabi_d2f
+ 954 0054 0346     		mov	r3, r0
+ 955 0056 7B60     		str	r3, [r7, #4]	@ float
+ 175:BME280.c      **** 	return heightOutput;
+ 956              		.loc 1 175 0
+ 957 0058 7B68     		ldr	r3, [r7, #4]	@ float
+ 176:BME280.c      **** 	
+ 177:BME280.c      **** }
+ 958              		.loc 1 177 0
+ 959 005a 1846     		mov	r0, r3
+ARM GAS  C:\Users\mame\AppData\Local\Temp\ccQcqcr0.s 			page 21
+
+
+ 960 005c 0C37     		adds	r7, r7, #12
+ 961              		.cfi_def_cfa_offset 12
+ 962 005e BD46     		mov	sp, r7
+ 963              		.cfi_def_cfa_register 13
+ 964              		@ sp needed
+ 965 0060 90BD     		pop	{r4, r7, pc}
+ 966              	.L18:
+ 967 0062 00BFAFF3 		.align	3
+ 967      0080
+ 968              	.L17:
+ 969 0068 C5C551B9 		.word	-1185823291
+ 970 006c 895AC83F 		.word	1070094985
+ 971 0070 00000060 		.word	1610612736
+ 972 0074 C662E6C0 		.word	-1058643258
+ 973 0078 80E6C547 		.word	1204151936
+ 974 007c 0000F03F 		.word	1072693248
+ 975              		.cfi_endproc
+ 976              	.LFE68:
+ 977              		.size	BME280_readFloatAltitudeMeters, .-BME280_readFloatAltitudeMeters
+ 978              		.section	.text.BME280_readFloatAltitudeFeet,"ax",%progbits
+ 979              		.align	2
+ 980              		.global	BME280_readFloatAltitudeFeet
+ 981              		.thumb
+ 982              		.thumb_func
+ 983              		.type	BME280_readFloatAltitudeFeet, %function
+ 984              	BME280_readFloatAltitudeFeet:
+ 985              	.LFB69:
+ 178:BME280.c      **** 
+ 179:BME280.c      **** float BME280_readFloatAltitudeFeet( void )
+ 180:BME280.c      **** {
+ 986              		.loc 1 180 0
+ 987              		.cfi_startproc
+ 988              		@ args = 0, pretend = 0, frame = 8
+ 989              		@ frame_needed = 1, uses_anonymous_args = 0
+ 990 0000 90B5     		push	{r4, r7, lr}
+ 991              		.cfi_def_cfa_offset 12
+ 992              		.cfi_offset 4, -12
+ 993              		.cfi_offset 7, -8
+ 994              		.cfi_offset 14, -4
+ 995 0002 83B0     		sub	sp, sp, #12
+ 996              		.cfi_def_cfa_offset 24
+ 997 0004 00AF     		add	r7, sp, #0
+ 998              		.cfi_def_cfa_register 7
+ 181:BME280.c      **** 	float heightOutput = 0;
+ 999              		.loc 1 181 0
+ 1000 0006 4FF00003 		mov	r3, #0
+ 1001 000a 7B60     		str	r3, [r7, #4]	@ float
+ 182:BME280.c      **** 	
+ 183:BME280.c      **** 	heightOutput = BME280_readFloatAltitudeMeters() * 3.28084;
+ 1002              		.loc 1 183 0
+ 1003 000c FFF7FEFF 		bl	BME280_readFloatAltitudeMeters
+ 1004 0010 0346     		mov	r3, r0
+ 1005 0012 1846     		mov	r0, r3
+ 1006 0014 FFF7FEFF 		bl	__aeabi_f2d
+ 1007 0018 09A3     		adr	r3, .L21
+ 1008 001a D3E90023 		ldrd	r2, [r3]
+ 1009 001e FFF7FEFF 		bl	__aeabi_dmul
+ARM GAS  C:\Users\mame\AppData\Local\Temp\ccQcqcr0.s 			page 22
+
+
+ 1010 0022 0346     		mov	r3, r0
+ 1011 0024 0C46     		mov	r4, r1
+ 1012 0026 1846     		mov	r0, r3
+ 1013 0028 2146     		mov	r1, r4
+ 1014 002a FFF7FEFF 		bl	__aeabi_d2f
+ 1015 002e 0346     		mov	r3, r0
+ 1016 0030 7B60     		str	r3, [r7, #4]	@ float
+ 184:BME280.c      **** 	return heightOutput;
+ 1017              		.loc 1 184 0
+ 1018 0032 7B68     		ldr	r3, [r7, #4]	@ float
+ 185:BME280.c      **** 	
+ 186:BME280.c      **** }
+ 1019              		.loc 1 186 0
+ 1020 0034 1846     		mov	r0, r3
+ 1021 0036 0C37     		adds	r7, r7, #12
+ 1022              		.cfi_def_cfa_offset 12
+ 1023 0038 BD46     		mov	sp, r7
+ 1024              		.cfi_def_cfa_register 13
+ 1025              		@ sp needed
+ 1026 003a 90BD     		pop	{r4, r7, pc}
+ 1027              	.L22:
+ 1028 003c AFF30080 		.align	3
+ 1029              	.L21:
+ 1030 0040 E544BB0A 		.word	180045029
+ 1031 0044 293F0A40 		.word	1074413353
+ 1032              		.cfi_endproc
+ 1033              	.LFE69:
+ 1034              		.size	BME280_readFloatAltitudeFeet, .-BME280_readFloatAltitudeFeet
+ 1035              		.global	__aeabi_i2f
+ 1036              		.section	.text.BME280_readFloatHumidity,"ax",%progbits
+ 1037              		.align	2
+ 1038              		.global	BME280_readFloatHumidity
+ 1039              		.thumb
+ 1040              		.thumb_func
+ 1041              		.type	BME280_readFloatHumidity, %function
+ 1042              	BME280_readFloatHumidity:
+ 1043              	.LFB70:
+ 187:BME280.c      **** 
+ 188:BME280.c      **** //****************************************************************************//
+ 189:BME280.c      **** //
+ 190:BME280.c      **** //  Humidity Section
+ 191:BME280.c      **** //
+ 192:BME280.c      **** //****************************************************************************//
+ 193:BME280.c      **** float BME280_readFloatHumidity( void )
+ 194:BME280.c      **** {
+ 1044              		.loc 1 194 0
+ 1045              		.cfi_startproc
+ 1046              		@ args = 0, pretend = 0, frame = 8
+ 1047              		@ frame_needed = 1, uses_anonymous_args = 0
+ 1048 0000 90B5     		push	{r4, r7, lr}
+ 1049              		.cfi_def_cfa_offset 12
+ 1050              		.cfi_offset 4, -12
+ 1051              		.cfi_offset 7, -8
+ 1052              		.cfi_offset 14, -4
+ 1053 0002 83B0     		sub	sp, sp, #12
+ 1054              		.cfi_def_cfa_offset 24
+ 1055 0004 00AF     		add	r7, sp, #0
+ARM GAS  C:\Users\mame\AppData\Local\Temp\ccQcqcr0.s 			page 23
+
+
+ 1056              		.cfi_def_cfa_register 7
+ 195:BME280.c      **** 	
+ 196:BME280.c      **** 	// Returns humidity in %RH as unsigned 32 bit integer in Q22. 10 format (22 integer and 10 fractio
+ 197:BME280.c      **** 	// Output value of “47445” represents 47445/1024 = 46. 333 %RH
+ 198:BME280.c      **** 	int32_t adc_H = ((uint32_t) BME280_readRegister(BME280_HUMIDITY_MSB_REG) << 8) | ((uint32_t) BME28
+ 1057              		.loc 1 198 0
+ 1058 0006 FD20     		movs	r0, #253
+ 1059 0008 FFF7FEFF 		bl	BME280_readRegister
+ 1060 000c 0346     		mov	r3, r0
+ 1061 000e 1C02     		lsls	r4, r3, #8
+ 1062 0010 FE20     		movs	r0, #254
+ 1063 0012 FFF7FEFF 		bl	BME280_readRegister
+ 1064 0016 0346     		mov	r3, r0
+ 1065 0018 2343     		orrs	r3, r3, r4
+ 1066 001a 7B60     		str	r3, [r7, #4]
+ 199:BME280.c      **** 	
+ 200:BME280.c      **** 	int32_t var1;
+ 201:BME280.c      **** 	var1 = (bme280.t_fine - ((int32_t)76800));
+ 1067              		.loc 1 201 0
+ 1068 001c 344B     		ldr	r3, .L25
+ 1069 001e 1B6B     		ldr	r3, [r3, #48]
+ 1070 0020 A3F59633 		sub	r3, r3, #76800
+ 1071 0024 3B60     		str	r3, [r7]
+ 202:BME280.c      **** 	var1 = (((((adc_H << 14) - (((int32_t)bme280.calibration.dig_H4) << 20) - (((int32_t)bme280.calibr
+ 1072              		.loc 1 202 0
+ 1073 0026 7B68     		ldr	r3, [r7, #4]
+ 1074 0028 9A03     		lsls	r2, r3, #14
+ 1075 002a 314B     		ldr	r3, .L25
+ 1076 002c B3F92830 		ldrsh	r3, [r3, #40]
+ 1077 0030 1B05     		lsls	r3, r3, #20
+ 1078 0032 D21A     		subs	r2, r2, r3
+ 1079 0034 2E4B     		ldr	r3, .L25
+ 1080 0036 B3F92A30 		ldrsh	r3, [r3, #42]
+ 1081 003a 1946     		mov	r1, r3
+ 1082 003c 3B68     		ldr	r3, [r7]
+ 1083 003e 03FB01F3 		mul	r3, r3, r1
+ 1084 0042 D31A     		subs	r3, r2, r3
+ 1085 0044 03F58043 		add	r3, r3, #16384
+ 203:BME280.c      **** 	((int32_t)16384)) >> 15) * (((((((var1 * ((int32_t)bme280.calibration.dig_H6)) >> 10) * (((var1 * 
+ 1086              		.loc 1 203 0
+ 1087 0048 DB13     		asrs	r3, r3, #15
+ 1088 004a 294A     		ldr	r2, .L25
+ 1089 004c 92F82C20 		ldrb	r2, [r2, #44]	@ zero_extendqisi2
+ 1090 0050 1146     		mov	r1, r2
+ 1091 0052 3A68     		ldr	r2, [r7]
+ 1092 0054 02FB01F2 		mul	r2, r2, r1
+ 1093 0058 9212     		asrs	r2, r2, #10
+ 1094 005a 2549     		ldr	r1, .L25
+ 1095 005c 91F82610 		ldrb	r1, [r1, #38]	@ zero_extendqisi2
+ 1096 0060 0846     		mov	r0, r1
+ 1097 0062 3968     		ldr	r1, [r7]
+ 1098 0064 01FB00F1 		mul	r1, r1, r0
+ 1099 0068 C912     		asrs	r1, r1, #11
+ 1100 006a 01F50041 		add	r1, r1, #32768
+ 1101 006e 01FB02F2 		mul	r2, r1, r2
+ 1102 0072 9212     		asrs	r2, r2, #10
+ 1103 0074 02F50012 		add	r2, r2, #2097152
+ARM GAS  C:\Users\mame\AppData\Local\Temp\ccQcqcr0.s 			page 24
+
+
+ 204:BME280.c      **** 	((int32_t)bme280.calibration.dig_H2) + 8192) >> 14));
+ 1104              		.loc 1 204 0
+ 1105 0078 1D49     		ldr	r1, .L25
+ 1106 007a B1F92410 		ldrsh	r1, [r1, #36]
+ 203:BME280.c      **** 	((int32_t)16384)) >> 15) * (((((((var1 * ((int32_t)bme280.calibration.dig_H6)) >> 10) * (((var1 * 
+ 1107              		.loc 1 203 0
+ 1108 007e 01FB02F2 		mul	r2, r1, r2
+ 1109              		.loc 1 204 0
+ 1110 0082 02F50052 		add	r2, r2, #8192
+ 1111 0086 9213     		asrs	r2, r2, #14
+ 202:BME280.c      **** 	var1 = (((((adc_H << 14) - (((int32_t)bme280.calibration.dig_H4) << 20) - (((int32_t)bme280.calibr
+ 1112              		.loc 1 202 0
+ 1113 0088 02FB03F3 		mul	r3, r2, r3
+ 1114 008c 3B60     		str	r3, [r7]
+ 205:BME280.c      **** 	var1 = (var1 - (((((var1 >> 15) * (var1 >> 15)) >> 7) * ((int32_t)bme280.calibration.dig_H1)) >> 4
+ 1115              		.loc 1 205 0
+ 1116 008e 3B68     		ldr	r3, [r7]
+ 1117 0090 DB13     		asrs	r3, r3, #15
+ 1118 0092 3A68     		ldr	r2, [r7]
+ 1119 0094 D213     		asrs	r2, r2, #15
+ 1120 0096 02FB03F3 		mul	r3, r2, r3
+ 1121 009a DB11     		asrs	r3, r3, #7
+ 1122 009c 144A     		ldr	r2, .L25
+ 1123 009e 92F82220 		ldrb	r2, [r2, #34]	@ zero_extendqisi2
+ 1124 00a2 02FB03F3 		mul	r3, r2, r3
+ 1125 00a6 1B11     		asrs	r3, r3, #4
+ 1126 00a8 3A68     		ldr	r2, [r7]
+ 1127 00aa D31A     		subs	r3, r2, r3
+ 1128 00ac 3B60     		str	r3, [r7]
+ 206:BME280.c      **** 	var1 = (var1 < 0 ? 0 : var1);
+ 1129              		.loc 1 206 0
+ 1130 00ae 3B68     		ldr	r3, [r7]
+ 1131 00b0 23EAE373 		bic	r3, r3, r3, asr #31
+ 1132 00b4 3B60     		str	r3, [r7]
+ 207:BME280.c      **** 	var1 = (var1 > 419430400 ? 419430400 : var1);
+ 1133              		.loc 1 207 0
+ 1134 00b6 3B68     		ldr	r3, [r7]
+ 1135 00b8 B3F1C85F 		cmp	r3, #419430400
+ 1136 00bc A8BF     		it	ge
+ 1137 00be 4FF0C853 		movge	r3, #419430400
+ 1138 00c2 3B60     		str	r3, [r7]
+ 208:BME280.c      **** 
+ 209:BME280.c      ****     bme280.RH = (float) (var1>>12) / 1024.0;
+ 1139              		.loc 1 209 0
+ 1140 00c4 3B68     		ldr	r3, [r7]
+ 1141 00c6 1B13     		asrs	r3, r3, #12
+ 1142 00c8 1846     		mov	r0, r3
+ 1143 00ca FFF7FEFF 		bl	__aeabi_i2f
+ 1144 00ce 0346     		mov	r3, r0
+ 1145 00d0 4FF08941 		mov	r1, #1149239296
+ 1146 00d4 1846     		mov	r0, r3
+ 1147 00d6 FFF7FEFF 		bl	__aeabi_fdiv
+ 1148 00da 0346     		mov	r3, r0
+ 1149 00dc 1A46     		mov	r2, r3
+ 1150 00de 044B     		ldr	r3, .L25
+ 1151 00e0 DA63     		str	r2, [r3, #60]	@ float
+ 210:BME280.c      **** 	return bme280.RH;
+ARM GAS  C:\Users\mame\AppData\Local\Temp\ccQcqcr0.s 			page 25
+
+
+ 1152              		.loc 1 210 0
+ 1153 00e2 034B     		ldr	r3, .L25
+ 1154 00e4 DB6B     		ldr	r3, [r3, #60]	@ float
+ 211:BME280.c      **** 
+ 212:BME280.c      **** }
+ 1155              		.loc 1 212 0
+ 1156 00e6 1846     		mov	r0, r3
+ 1157 00e8 0C37     		adds	r7, r7, #12
+ 1158              		.cfi_def_cfa_offset 12
+ 1159 00ea BD46     		mov	sp, r7
+ 1160              		.cfi_def_cfa_register 13
+ 1161              		@ sp needed
+ 1162 00ec 90BD     		pop	{r4, r7, pc}
+ 1163              	.L26:
+ 1164 00ee 00BF     		.align	2
+ 1165              	.L25:
+ 1166 00f0 00000000 		.word	bme280
+ 1167              		.cfi_endproc
+ 1168              	.LFE70:
+ 1169              		.size	BME280_readFloatHumidity, .-BME280_readFloatHumidity
+ 1170              		.section	.text.BME280_readTempC,"ax",%progbits
+ 1171              		.align	2
+ 1172              		.global	BME280_readTempC
+ 1173              		.thumb
+ 1174              		.thumb_func
+ 1175              		.type	BME280_readTempC, %function
+ 1176              	BME280_readTempC:
+ 1177              	.LFB71:
+ 213:BME280.c      **** 
+ 214:BME280.c      **** 
+ 215:BME280.c      **** 
+ 216:BME280.c      **** //****************************************************************************//
+ 217:BME280.c      **** //
+ 218:BME280.c      **** //  Temperature Section
+ 219:BME280.c      **** //
+ 220:BME280.c      **** //****************************************************************************//
+ 221:BME280.c      **** 
+ 222:BME280.c      **** float BME280_readTempC( void )
+ 223:BME280.c      **** {
+ 1178              		.loc 1 223 0
+ 1179              		.cfi_startproc
+ 1180              		@ args = 0, pretend = 0, frame = 32
+ 1181              		@ frame_needed = 1, uses_anonymous_args = 0
+ 1182 0000 90B5     		push	{r4, r7, lr}
+ 1183              		.cfi_def_cfa_offset 12
+ 1184              		.cfi_offset 4, -12
+ 1185              		.cfi_offset 7, -8
+ 1186              		.cfi_offset 14, -4
+ 1187 0002 89B0     		sub	sp, sp, #36
+ 1188              		.cfi_def_cfa_offset 48
+ 1189 0004 00AF     		add	r7, sp, #0
+ 1190              		.cfi_def_cfa_register 7
+ 224:BME280.c      **** 	// Returns temperature in DegC, resolution is 0.01 DegC. Output value of “5123” equals 51.23 D
+ 225:BME280.c      **** 	// t_fine carries fine temperature as global value
+ 226:BME280.c      **** 
+ 227:BME280.c      **** 	//get the reading (adc_T);
+ 228:BME280.c      **** 	int32_t adc_T = ((uint32_t)BME280_readRegister(BME280_TEMPERATURE_MSB_REG) << 12) | ((uint32_t)BME
+ARM GAS  C:\Users\mame\AppData\Local\Temp\ccQcqcr0.s 			page 26
+
+
+ 1191              		.loc 1 228 0
+ 1192 0006 FA20     		movs	r0, #250
+ 1193 0008 FFF7FEFF 		bl	BME280_readRegister
+ 1194 000c 0346     		mov	r3, r0
+ 1195 000e 1C03     		lsls	r4, r3, #12
+ 1196 0010 FB20     		movs	r0, #251
+ 1197 0012 FFF7FEFF 		bl	BME280_readRegister
+ 1198 0016 0346     		mov	r3, r0
+ 1199 0018 1B01     		lsls	r3, r3, #4
+ 1200 001a 1C43     		orrs	r4, r4, r3
+ 1201 001c FC20     		movs	r0, #252
+ 1202 001e FFF7FEFF 		bl	BME280_readRegister
+ 1203 0022 0346     		mov	r3, r0
+ 1204 0024 1B09     		lsrs	r3, r3, #4
+ 1205 0026 DBB2     		uxtb	r3, r3
+ 1206 0028 03F00F03 		and	r3, r3, #15
+ 1207 002c 2343     		orrs	r3, r3, r4
+ 1208 002e FB61     		str	r3, [r7, #28]
+ 229:BME280.c      **** 
+ 230:BME280.c      **** 	//By datasheet, calibrate
+ 231:BME280.c      **** 	int64_t var1, var2;
+ 232:BME280.c      **** 
+ 233:BME280.c      **** 	var1 = ((((adc_T>>3) - ((int32_t)bme280.calibration.dig_T1<<1))) * ((int32_t)bme280.calibration.di
+ 1209              		.loc 1 233 0
+ 1210 0030 FB69     		ldr	r3, [r7, #28]
+ 1211 0032 DA10     		asrs	r2, r3, #3
+ 1212 0034 224B     		ldr	r3, .L29
+ 1213 0036 5B89     		ldrh	r3, [r3, #10]
+ 1214 0038 5B00     		lsls	r3, r3, #1
+ 1215 003a D31A     		subs	r3, r2, r3
+ 1216 003c 204A     		ldr	r2, .L29
+ 1217 003e B2F90C20 		ldrsh	r2, [r2, #12]
+ 1218 0042 02FB03F3 		mul	r3, r2, r3
+ 1219 0046 DB12     		asrs	r3, r3, #11
+ 1220 0048 4FEAE374 		asr	r4, r3, #31
+ 1221 004c C7E90434 		strd	r3, [r7, #16]
+ 234:BME280.c      **** 	var2 = (((((adc_T>>4) - ((int32_t)bme280.calibration.dig_T1)) * ((adc_T>>4) - ((int32_t)bme280.cal
+ 1222              		.loc 1 234 0
+ 1223 0050 FB69     		ldr	r3, [r7, #28]
+ 1224 0052 1B11     		asrs	r3, r3, #4
+ 1225 0054 1A4A     		ldr	r2, .L29
+ 1226 0056 5289     		ldrh	r2, [r2, #10]
+ 1227 0058 9B1A     		subs	r3, r3, r2
+ 1228 005a FA69     		ldr	r2, [r7, #28]
+ 1229 005c 1211     		asrs	r2, r2, #4
+ 1230 005e 1849     		ldr	r1, .L29
+ 1231 0060 4989     		ldrh	r1, [r1, #10]
+ 1232 0062 521A     		subs	r2, r2, r1
+ 1233 0064 02FB03F3 		mul	r3, r2, r3
+ 1234 0068 1B13     		asrs	r3, r3, #12
+ 1235 006a 154A     		ldr	r2, .L29
+ 1236 006c B2F90E20 		ldrsh	r2, [r2, #14]
+ 1237 0070 02FB03F3 		mul	r3, r2, r3
+ 1238 0074 9B13     		asrs	r3, r3, #14
+ 1239 0076 4FEAE374 		asr	r4, r3, #31
+ 1240 007a C7E90234 		strd	r3, [r7, #8]
+ 235:BME280.c      **** 	
+ARM GAS  C:\Users\mame\AppData\Local\Temp\ccQcqcr0.s 			page 27
+
+
+ 236:BME280.c      ****     bme280.t_fine = var1 + var2;
+ 1241              		.loc 1 236 0
+ 1242 007e 3A69     		ldr	r2, [r7, #16]
+ 1243 0080 BB68     		ldr	r3, [r7, #8]
+ 1244 0082 1344     		add	r3, r3, r2
+ 1245 0084 1A46     		mov	r2, r3
+ 1246 0086 0E4B     		ldr	r3, .L29
+ 1247 0088 1A63     		str	r2, [r3, #48]
+ 237:BME280.c      **** 	float output = (bme280.t_fine * 5 + 128) >> 8;
+ 1248              		.loc 1 237 0
+ 1249 008a 0D4B     		ldr	r3, .L29
+ 1250 008c 1A6B     		ldr	r2, [r3, #48]
+ 1251 008e 1346     		mov	r3, r2
+ 1252 0090 9B00     		lsls	r3, r3, #2
+ 1253 0092 1344     		add	r3, r3, r2
+ 1254 0094 8033     		adds	r3, r3, #128
+ 1255 0096 1B12     		asrs	r3, r3, #8
+ 1256 0098 1846     		mov	r0, r3
+ 1257 009a FFF7FEFF 		bl	__aeabi_i2f
+ 1258 009e 0346     		mov	r3, r0
+ 1259 00a0 7B60     		str	r3, [r7, #4]	@ float
+ 238:BME280.c      **** 
+ 239:BME280.c      **** 	output = output / 100;
+ 1260              		.loc 1 239 0
+ 1261 00a2 0849     		ldr	r1, .L29+4
+ 1262 00a4 7868     		ldr	r0, [r7, #4]	@ float
+ 1263 00a6 FFF7FEFF 		bl	__aeabi_fdiv
+ 1264 00aa 0346     		mov	r3, r0
+ 1265 00ac 7B60     		str	r3, [r7, #4]	@ float
+ 240:BME280.c      **** 	
+ 241:BME280.c      ****     bme280.temp_C = output;
+ 1266              		.loc 1 241 0
+ 1267 00ae 044A     		ldr	r2, .L29
+ 1268 00b0 7B68     		ldr	r3, [r7, #4]	@ float
+ 1269 00b2 5363     		str	r3, [r2, #52]	@ float
+ 242:BME280.c      **** 	return bme280.temp_C;
+ 1270              		.loc 1 242 0
+ 1271 00b4 024B     		ldr	r3, .L29
+ 1272 00b6 5B6B     		ldr	r3, [r3, #52]	@ float
+ 243:BME280.c      **** }
+ 1273              		.loc 1 243 0
+ 1274 00b8 1846     		mov	r0, r3
+ 1275 00ba 2437     		adds	r7, r7, #36
+ 1276              		.cfi_def_cfa_offset 12
+ 1277 00bc BD46     		mov	sp, r7
+ 1278              		.cfi_def_cfa_register 13
+ 1279              		@ sp needed
+ 1280 00be 90BD     		pop	{r4, r7, pc}
+ 1281              	.L30:
+ 1282              		.align	2
+ 1283              	.L29:
+ 1284 00c0 00000000 		.word	bme280
+ 1285 00c4 0000C842 		.word	1120403456
+ 1286              		.cfi_endproc
+ 1287              	.LFE71:
+ 1288              		.size	BME280_readTempC, .-BME280_readTempC
+ 1289              		.global	__aeabi_fmul
+ARM GAS  C:\Users\mame\AppData\Local\Temp\ccQcqcr0.s 			page 28
+
+
+ 1290              		.global	__aeabi_fadd
+ 1291              		.section	.text.BME280_readTempF,"ax",%progbits
+ 1292              		.align	2
+ 1293              		.global	BME280_readTempF
+ 1294              		.thumb
+ 1295              		.thumb_func
+ 1296              		.type	BME280_readTempF, %function
+ 1297              	BME280_readTempF:
+ 1298              	.LFB72:
+ 244:BME280.c      **** 
+ 245:BME280.c      **** float BME280_readTempF( void )
+ 246:BME280.c      **** {
+ 1299              		.loc 1 246 0
+ 1300              		.cfi_startproc
+ 1301              		@ args = 0, pretend = 0, frame = 8
+ 1302              		@ frame_needed = 1, uses_anonymous_args = 0
+ 1303 0000 80B5     		push	{r7, lr}
+ 1304              		.cfi_def_cfa_offset 8
+ 1305              		.cfi_offset 7, -8
+ 1306              		.cfi_offset 14, -4
+ 1307 0002 82B0     		sub	sp, sp, #8
+ 1308              		.cfi_def_cfa_offset 16
+ 1309 0004 00AF     		add	r7, sp, #0
+ 1310              		.cfi_def_cfa_register 7
+ 247:BME280.c      **** 	float output = BME280_readTempC();
+ 1311              		.loc 1 247 0
+ 1312 0006 FFF7FEFF 		bl	BME280_readTempC
+ 1313 000a 7860     		str	r0, [r7, #4]	@ float
+ 248:BME280.c      **** 	output = (output * 9) / 5 + 32;
+ 1314              		.loc 1 248 0
+ 1315 000c 0A49     		ldr	r1, .L33
+ 1316 000e 7868     		ldr	r0, [r7, #4]	@ float
+ 1317 0010 FFF7FEFF 		bl	__aeabi_fmul
+ 1318 0014 0346     		mov	r3, r0
+ 1319 0016 0949     		ldr	r1, .L33+4
+ 1320 0018 1846     		mov	r0, r3
+ 1321 001a FFF7FEFF 		bl	__aeabi_fdiv
+ 1322 001e 0346     		mov	r3, r0
+ 1323 0020 4FF08441 		mov	r1, #1107296256
+ 1324 0024 1846     		mov	r0, r3
+ 1325 0026 FFF7FEFF 		bl	__aeabi_fadd
+ 1326 002a 0346     		mov	r3, r0
+ 1327 002c 7B60     		str	r3, [r7, #4]	@ float
+ 249:BME280.c      **** 
+ 250:BME280.c      **** 	return output;
+ 1328              		.loc 1 250 0
+ 1329 002e 7B68     		ldr	r3, [r7, #4]	@ float
+ 251:BME280.c      **** }
+ 1330              		.loc 1 251 0
+ 1331 0030 1846     		mov	r0, r3
+ 1332 0032 0837     		adds	r7, r7, #8
+ 1333              		.cfi_def_cfa_offset 8
+ 1334 0034 BD46     		mov	sp, r7
+ 1335              		.cfi_def_cfa_register 13
+ 1336              		@ sp needed
+ 1337 0036 80BD     		pop	{r7, pc}
+ 1338              	.L34:
+ARM GAS  C:\Users\mame\AppData\Local\Temp\ccQcqcr0.s 			page 29
+
+
+ 1339              		.align	2
+ 1340              	.L33:
+ 1341 0038 00001041 		.word	1091567616
+ 1342 003c 0000A040 		.word	1084227584
+ 1343              		.cfi_endproc
+ 1344              	.LFE72:
+ 1345              		.size	BME280_readTempF, .-BME280_readTempF
+ 1346              		.section	.text.BME280_readRegister,"ax",%progbits
+ 1347              		.align	2
+ 1348              		.global	BME280_readRegister
+ 1349              		.thumb
+ 1350              		.thumb_func
+ 1351              		.type	BME280_readRegister, %function
+ 1352              	BME280_readRegister:
+ 1353              	.LFB73:
+ 252:BME280.c      **** 
+ 253:BME280.c      **** //****************************************************************************//
+ 254:BME280.c      **** //
+ 255:BME280.c      **** //  Utility
+ 256:BME280.c      **** //
+ 257:BME280.c      **** //****************************************************************************//
+ 258:BME280.c      **** uint8_t BME280_readRegister(uint8_t offset)
+ 259:BME280.c      **** {
+ 1354              		.loc 1 259 0
+ 1355              		.cfi_startproc
+ 1356              		@ args = 0, pretend = 0, frame = 16
+ 1357              		@ frame_needed = 1, uses_anonymous_args = 0
+ 1358 0000 80B5     		push	{r7, lr}
+ 1359              		.cfi_def_cfa_offset 8
+ 1360              		.cfi_offset 7, -8
+ 1361              		.cfi_offset 14, -4
+ 1362 0002 84B0     		sub	sp, sp, #16
+ 1363              		.cfi_def_cfa_offset 24
+ 1364 0004 00AF     		add	r7, sp, #0
+ 1365              		.cfi_def_cfa_register 7
+ 1366 0006 0346     		mov	r3, r0
+ 1367 0008 FB71     		strb	r3, [r7, #7]
+ 260:BME280.c      **** 	//Return value
+ 261:BME280.c      **** 	uint8_t result;
+ 262:BME280.c      **** 	uint8_t numBytes = 1;
+ 1368              		.loc 1 262 0
+ 1369 000a 0123     		movs	r3, #1
+ 1370 000c 7B73     		strb	r3, [r7, #13]
+ 263:BME280.c      ****     
+ 264:BME280.c      ****     uint16  iter;
+ 265:BME280.c      ****     
+ 266:BME280.c      **** 	switch (bme280.settings.commInterface) {
+ 1371              		.loc 1 266 0
+ 1372 000e 244B     		ldr	r3, .L52
+ 1373 0010 1B78     		ldrb	r3, [r3]	@ zero_extendqisi2
+ 1374 0012 002B     		cmp	r3, #0
+ 1375 0014 02D0     		beq	.L37
+ 1376 0016 012B     		cmp	r3, #1
+ 1377 0018 3CD0     		beq	.L49
+ 267:BME280.c      **** 
+ 268:BME280.c      ****     	case BME280_I2C_MODE:
+ 269:BME280.c      ****             I2C_Wakeup();
+ARM GAS  C:\Users\mame\AppData\Local\Temp\ccQcqcr0.s 			page 30
+
+
+ 270:BME280.c      ****             I2C_MasterClearStatus(); /* Clear any previous status */
+ 271:BME280.c      ****             
+ 272:BME280.c      ****             // Write to register
+ 273:BME280.c      ****             I2C_MasterWriteBuf(bme280.settings.I2CAddress, (uint8 *) &offset, 1, I2C_MODE_COMPLETE_
+ 274:BME280.c      ****             for(iter = 0; iter < BME280_MAX_ITER; iter++)
+ 275:BME280.c      ****             {
+ 276:BME280.c      ****                 if(0u != (I2C_MasterStatus() & I2C_MSTAT_WR_CMPLT))
+ 277:BME280.c      ****                 {
+ 278:BME280.c      ****                     /* Transfer complete. Check Master status to make sure that transfer
+ 279:BME280.c      ****                     completed without errors. */
+ 280:BME280.c      ****                     break;
+ 281:BME280.c      ****                 }
+ 282:BME280.c      ****             }        
+ 283:BME280.c      ****             
+ 284:BME280.c      ****             // Read Buffer        
+ 285:BME280.c      ****             I2C_MasterReadBuf(bme280.settings.I2CAddress, &result, numBytes, I2C_MODE_COMPLETE_XFER
+ 286:BME280.c      ****             
+ 287:BME280.c      ****             for(iter = 0; iter < BME280_MAX_ITER; iter++){
+ 288:BME280.c      ****                 if(0u != (I2C_MasterStatus() & I2C_MSTAT_RD_CMPLT))
+ 289:BME280.c      ****                 {
+ 290:BME280.c      ****                     /* Transfer complete. Check Master status to make sure that transfer
+ 291:BME280.c      ****                     completed without errors. */
+ 292:BME280.c      ****                     break;
+ 293:BME280.c      ****                 }
+ 294:BME280.c      ****                 
+ 295:BME280.c      ****             }
+ 296:BME280.c      ****             I2C_Sleep();
+ 297:BME280.c      **** 
+ 298:BME280.c      ****     		break;
+ 299:BME280.c      **** 
+ 300:BME280.c      ****     	case BME280_SPI_MODE:
+ 301:BME280.c      ****     		// TODO
+ 302:BME280.c      ****     		break;
+ 303:BME280.c      **** 
+ 304:BME280.c      ****     	default:
+ 305:BME280.c      ****     		break;
+ 1378              		.loc 1 305 0
+ 1379 001a 3CE0     		b	.L47
+ 1380              	.L37:
+ 269:BME280.c      ****             I2C_MasterClearStatus(); /* Clear any previous status */
+ 1381              		.loc 1 269 0
+ 1382 001c FFF7FEFF 		bl	I2C_Wakeup
+ 270:BME280.c      ****             
+ 1383              		.loc 1 270 0
+ 1384 0020 FFF7FEFF 		bl	I2C_MasterClearStatus
+ 273:BME280.c      ****             for(iter = 0; iter < BME280_MAX_ITER; iter++)
+ 1385              		.loc 1 273 0
+ 1386 0024 1E4B     		ldr	r3, .L52
+ 1387 0026 5878     		ldrb	r0, [r3, #1]	@ zero_extendqisi2
+ 1388 0028 F91D     		adds	r1, r7, #7
+ 1389 002a 0023     		movs	r3, #0
+ 1390 002c 0122     		movs	r2, #1
+ 1391 002e FFF7FEFF 		bl	I2C_MasterWriteBuf
+ 274:BME280.c      ****             {
+ 1392              		.loc 1 274 0
+ 1393 0032 0023     		movs	r3, #0
+ 1394 0034 FB81     		strh	r3, [r7, #14]	@ movhi
+ARM GAS  C:\Users\mame\AppData\Local\Temp\ccQcqcr0.s 			page 31
+
+
+ 1395 0036 09E0     		b	.L39
+ 1396              	.L42:
+ 276:BME280.c      ****                 {
+ 1397              		.loc 1 276 0
+ 1398 0038 FFF7FEFF 		bl	I2C_MasterStatus
+ 1399 003c 0346     		mov	r3, r0
+ 1400 003e 03F00203 		and	r3, r3, #2
+ 1401 0042 002B     		cmp	r3, #0
+ 1402 0044 07D1     		bne	.L50
+ 274:BME280.c      ****             {
+ 1403              		.loc 1 274 0 discriminator 2
+ 1404 0046 FB89     		ldrh	r3, [r7, #14]
+ 1405 0048 0133     		adds	r3, r3, #1
+ 1406 004a FB81     		strh	r3, [r7, #14]	@ movhi
+ 1407              	.L39:
+ 274:BME280.c      ****             {
+ 1408              		.loc 1 274 0 is_stmt 0 discriminator 1
+ 1409 004c FB89     		ldrh	r3, [r7, #14]
+ 1410 004e B3F5967F 		cmp	r3, #300
+ 1411 0052 F1D3     		bcc	.L42
+ 1412 0054 00E0     		b	.L41
+ 1413              	.L50:
+ 280:BME280.c      ****                 }
+ 1414              		.loc 1 280 0 is_stmt 1
+ 1415 0056 00BF     		nop
+ 1416              	.L41:
+ 285:BME280.c      ****             
+ 1417              		.loc 1 285 0
+ 1418 0058 114B     		ldr	r3, .L52
+ 1419 005a 5878     		ldrb	r0, [r3, #1]	@ zero_extendqisi2
+ 1420 005c 7A7B     		ldrb	r2, [r7, #13]	@ zero_extendqisi2
+ 1421 005e 07F10C01 		add	r1, r7, #12
+ 1422 0062 0023     		movs	r3, #0
+ 1423 0064 FFF7FEFF 		bl	I2C_MasterReadBuf
+ 287:BME280.c      ****                 if(0u != (I2C_MasterStatus() & I2C_MSTAT_RD_CMPLT))
+ 1424              		.loc 1 287 0
+ 1425 0068 0023     		movs	r3, #0
+ 1426 006a FB81     		strh	r3, [r7, #14]	@ movhi
+ 1427 006c 09E0     		b	.L43
+ 1428              	.L46:
+ 288:BME280.c      ****                 {
+ 1429              		.loc 1 288 0
+ 1430 006e FFF7FEFF 		bl	I2C_MasterStatus
+ 1431 0072 0346     		mov	r3, r0
+ 1432 0074 03F00103 		and	r3, r3, #1
+ 1433 0078 002B     		cmp	r3, #0
+ 1434 007a 07D1     		bne	.L51
+ 287:BME280.c      ****                 if(0u != (I2C_MasterStatus() & I2C_MSTAT_RD_CMPLT))
+ 1435              		.loc 1 287 0 discriminator 2
+ 1436 007c FB89     		ldrh	r3, [r7, #14]
+ 1437 007e 0133     		adds	r3, r3, #1
+ 1438 0080 FB81     		strh	r3, [r7, #14]	@ movhi
+ 1439              	.L43:
+ 287:BME280.c      ****                 if(0u != (I2C_MasterStatus() & I2C_MSTAT_RD_CMPLT))
+ 1440              		.loc 1 287 0 is_stmt 0 discriminator 1
+ 1441 0082 FB89     		ldrh	r3, [r7, #14]
+ 1442 0084 B3F5967F 		cmp	r3, #300
+ARM GAS  C:\Users\mame\AppData\Local\Temp\ccQcqcr0.s 			page 32
+
+
+ 1443 0088 F1D3     		bcc	.L46
+ 1444 008a 00E0     		b	.L45
+ 1445              	.L51:
+ 292:BME280.c      ****                 }
+ 1446              		.loc 1 292 0 is_stmt 1
+ 1447 008c 00BF     		nop
+ 1448              	.L45:
+ 296:BME280.c      **** 
+ 1449              		.loc 1 296 0
+ 1450 008e FFF7FEFF 		bl	I2C_Sleep
+ 298:BME280.c      **** 
+ 1451              		.loc 1 298 0
+ 1452 0092 00E0     		b	.L47
+ 1453              	.L49:
+ 302:BME280.c      **** 
+ 1454              		.loc 1 302 0
+ 1455 0094 00BF     		nop
+ 1456              	.L47:
+ 306:BME280.c      **** 	}
+ 307:BME280.c      **** 	return result;
+ 1457              		.loc 1 307 0
+ 1458 0096 3B7B     		ldrb	r3, [r7, #12]	@ zero_extendqisi2
+ 308:BME280.c      **** }
+ 1459              		.loc 1 308 0
+ 1460 0098 1846     		mov	r0, r3
+ 1461 009a 1037     		adds	r7, r7, #16
+ 1462              		.cfi_def_cfa_offset 8
+ 1463 009c BD46     		mov	sp, r7
+ 1464              		.cfi_def_cfa_register 13
+ 1465              		@ sp needed
+ 1466 009e 80BD     		pop	{r7, pc}
+ 1467              	.L53:
+ 1468              		.align	2
+ 1469              	.L52:
+ 1470 00a0 00000000 		.word	bme280
+ 1471              		.cfi_endproc
+ 1472              	.LFE73:
+ 1473              		.size	BME280_readRegister, .-BME280_readRegister
+ 1474              		.section	.text.BME280_writeRegister,"ax",%progbits
+ 1475              		.align	2
+ 1476              		.global	BME280_writeRegister
+ 1477              		.thumb
+ 1478              		.thumb_func
+ 1479              		.type	BME280_writeRegister, %function
+ 1480              	BME280_writeRegister:
+ 1481              	.LFB74:
+ 309:BME280.c      **** 
+ 310:BME280.c      **** 
+ 311:BME280.c      **** void BME280_writeRegister(uint8_t offset, uint8_t data)
+ 312:BME280.c      **** {
+ 1482              		.loc 1 312 0
+ 1483              		.cfi_startproc
+ 1484              		@ args = 0, pretend = 0, frame = 16
+ 1485              		@ frame_needed = 1, uses_anonymous_args = 0
+ 1486 0000 80B5     		push	{r7, lr}
+ 1487              		.cfi_def_cfa_offset 8
+ 1488              		.cfi_offset 7, -8
+ARM GAS  C:\Users\mame\AppData\Local\Temp\ccQcqcr0.s 			page 33
+
+
+ 1489              		.cfi_offset 14, -4
+ 1490 0002 84B0     		sub	sp, sp, #16
+ 1491              		.cfi_def_cfa_offset 24
+ 1492 0004 00AF     		add	r7, sp, #0
+ 1493              		.cfi_def_cfa_register 7
+ 1494 0006 0346     		mov	r3, r0
+ 1495 0008 0A46     		mov	r2, r1
+ 1496 000a FB71     		strb	r3, [r7, #7]
+ 1497 000c 1346     		mov	r3, r2
+ 1498 000e BB71     		strb	r3, [r7, #6]
+ 313:BME280.c      ****     uint8 packet[] = {offset, data};
+ 1499              		.loc 1 313 0
+ 1500 0010 FB79     		ldrb	r3, [r7, #7]
+ 1501 0012 3B73     		strb	r3, [r7, #12]
+ 1502 0014 BB79     		ldrb	r3, [r7, #6]
+ 1503 0016 7B73     		strb	r3, [r7, #13]
+ 314:BME280.c      ****     uint16 iter;
+ 315:BME280.c      ****     
+ 316:BME280.c      **** 	switch (bme280.settings.commInterface)
+ 1504              		.loc 1 316 0
+ 1505 0018 164B     		ldr	r3, .L65
+ 1506 001a 1B78     		ldrb	r3, [r3]	@ zero_extendqisi2
+ 1507 001c 002B     		cmp	r3, #0
+ 1508 001e 02D0     		beq	.L56
+ 1509 0020 012B     		cmp	r3, #1
+ 1510 0022 22D0     		beq	.L63
+ 317:BME280.c      **** 	{
+ 318:BME280.c      ****     	case BME280_I2C_MODE:
+ 319:BME280.c      ****     		//Write the byte
+ 320:BME280.c      ****             I2C_Wakeup();
+ 321:BME280.c      ****             I2C_MasterClearStatus(); /* Clear any previous status */
+ 322:BME280.c      ****             
+ 323:BME280.c      ****             // Write to register
+ 324:BME280.c      ****             I2C_MasterWriteBuf(bme280.settings.I2CAddress, (uint8 *) &packet, 2, I2C_MODE_COMPLETE_
+ 325:BME280.c      ****             for(iter = 0; iter < BME280_MAX_ITER; iter++)
+ 326:BME280.c      ****             {
+ 327:BME280.c      ****                 if(0u != (I2C_MasterStatus() & I2C_MSTAT_WR_CMPLT))
+ 328:BME280.c      ****                 {
+ 329:BME280.c      ****                     // Transfer complete. Check Master status to make sure that transfer
+ 330:BME280.c      ****                     //completed without errors. 
+ 331:BME280.c      ****                     break;               
+ 332:BME280.c      ****                 }
+ 333:BME280.c      ****             }          
+ 334:BME280.c      ****             
+ 335:BME280.c      ****             I2C_Sleep();        
+ 336:BME280.c      **** 
+ 337:BME280.c      ****     		break;
+ 338:BME280.c      **** 
+ 339:BME280.c      ****     	case BME280_SPI_MODE:
+ 340:BME280.c      ****     		//TODO
+ 341:BME280.c      ****     		break;
+ 342:BME280.c      **** 
+ 343:BME280.c      ****     	default:
+ 344:BME280.c      ****     		break;
+ 1511              		.loc 1 344 0
+ 1512 0024 22E0     		b	.L62
+ 1513              	.L56:
+ARM GAS  C:\Users\mame\AppData\Local\Temp\ccQcqcr0.s 			page 34
+
+
+ 320:BME280.c      ****             I2C_MasterClearStatus(); /* Clear any previous status */
+ 1514              		.loc 1 320 0
+ 1515 0026 FFF7FEFF 		bl	I2C_Wakeup
+ 321:BME280.c      ****             
+ 1516              		.loc 1 321 0
+ 1517 002a FFF7FEFF 		bl	I2C_MasterClearStatus
+ 324:BME280.c      ****             for(iter = 0; iter < BME280_MAX_ITER; iter++)
+ 1518              		.loc 1 324 0
+ 1519 002e 114B     		ldr	r3, .L65
+ 1520 0030 5878     		ldrb	r0, [r3, #1]	@ zero_extendqisi2
+ 1521 0032 07F10C01 		add	r1, r7, #12
+ 1522 0036 0023     		movs	r3, #0
+ 1523 0038 0222     		movs	r2, #2
+ 1524 003a FFF7FEFF 		bl	I2C_MasterWriteBuf
+ 325:BME280.c      ****             {
+ 1525              		.loc 1 325 0
+ 1526 003e 0023     		movs	r3, #0
+ 1527 0040 FB81     		strh	r3, [r7, #14]	@ movhi
+ 1528 0042 09E0     		b	.L58
+ 1529              	.L61:
+ 327:BME280.c      ****                 {
+ 1530              		.loc 1 327 0
+ 1531 0044 FFF7FEFF 		bl	I2C_MasterStatus
+ 1532 0048 0346     		mov	r3, r0
+ 1533 004a 03F00203 		and	r3, r3, #2
+ 1534 004e 002B     		cmp	r3, #0
+ 1535 0050 07D1     		bne	.L64
+ 325:BME280.c      ****             {
+ 1536              		.loc 1 325 0 discriminator 2
+ 1537 0052 FB89     		ldrh	r3, [r7, #14]
+ 1538 0054 0133     		adds	r3, r3, #1
+ 1539 0056 FB81     		strh	r3, [r7, #14]	@ movhi
+ 1540              	.L58:
+ 325:BME280.c      ****             {
+ 1541              		.loc 1 325 0 is_stmt 0 discriminator 1
+ 1542 0058 FB89     		ldrh	r3, [r7, #14]
+ 1543 005a B3F5967F 		cmp	r3, #300
+ 1544 005e F1D3     		bcc	.L61
+ 1545 0060 00E0     		b	.L60
+ 1546              	.L64:
+ 331:BME280.c      ****                 }
+ 1547              		.loc 1 331 0 is_stmt 1
+ 1548 0062 00BF     		nop
+ 1549              	.L60:
+ 335:BME280.c      **** 
+ 1550              		.loc 1 335 0
+ 1551 0064 FFF7FEFF 		bl	I2C_Sleep
+ 337:BME280.c      **** 
+ 1552              		.loc 1 337 0
+ 1553 0068 00E0     		b	.L62
+ 1554              	.L63:
+ 341:BME280.c      **** 
+ 1555              		.loc 1 341 0
+ 1556 006a 00BF     		nop
+ 1557              	.L62:
+ 345:BME280.c      **** 	}
+ 346:BME280.c      **** }
+ARM GAS  C:\Users\mame\AppData\Local\Temp\ccQcqcr0.s 			page 35
+
+
+ 1558              		.loc 1 346 0 discriminator 1
+ 1559 006c 00BF     		nop
+ 1560 006e 1037     		adds	r7, r7, #16
+ 1561              		.cfi_def_cfa_offset 8
+ 1562 0070 BD46     		mov	sp, r7
+ 1563              		.cfi_def_cfa_register 13
+ 1564              		@ sp needed
+ 1565 0072 80BD     		pop	{r7, pc}
+ 1566              	.L66:
+ 1567              		.align	2
+ 1568              	.L65:
+ 1569 0074 00000000 		.word	bme280
+ 1570              		.cfi_endproc
+ 1571              	.LFE74:
+ 1572              		.size	BME280_writeRegister, .-BME280_writeRegister
+ 1573              		.text
+ 1574              	.Letext0:
+ 1575              		.file 2 "c:\\program files\\cypress\\psoc creator\\4.1\\psoc creator\\import\\gnu\\arm\\5.4.1\\arm
+ 1576              		.file 3 "c:\\program files\\cypress\\psoc creator\\4.1\\psoc creator\\import\\gnu\\arm\\5.4.1\\arm
+ 1577              		.file 4 "Generated_Source\\PSoC5/cytypes.h"
+ 1578              		.file 5 "BME280.h"
+ 1579              		.file 6 "Generated_Source\\PSoC5/core_cm3.h"
+ 1580              		.section	.debug_info,"",%progbits
+ 1581              	.Ldebug_info0:
+ 1582 0000 85050000 		.4byte	0x585
+ 1583 0004 0400     		.2byte	0x4
+ 1584 0006 00000000 		.4byte	.Ldebug_abbrev0
+ 1585 000a 04       		.byte	0x4
+ 1586 000b 01       		.uleb128 0x1
+ 1587 000c DC000000 		.4byte	.LASF93
+ 1588 0010 0C       		.byte	0xc
+ 1589 0011 01020000 		.4byte	.LASF94
+ 1590 0015 97020000 		.4byte	.LASF95
+ 1591 0019 00000000 		.4byte	.Ldebug_ranges0+0
+ 1592 001d 00000000 		.4byte	0
+ 1593 0021 00000000 		.4byte	.Ldebug_line0
+ 1594 0025 02       		.uleb128 0x2
+ 1595 0026 01       		.byte	0x1
+ 1596 0027 06       		.byte	0x6
+ 1597 0028 CF020000 		.4byte	.LASF0
+ 1598 002c 03       		.uleb128 0x3
+ 1599 002d 58020000 		.4byte	.LASF2
+ 1600 0031 02       		.byte	0x2
+ 1601 0032 1D       		.byte	0x1d
+ 1602 0033 37000000 		.4byte	0x37
+ 1603 0037 02       		.uleb128 0x2
+ 1604 0038 01       		.byte	0x1
+ 1605 0039 08       		.byte	0x8
+ 1606 003a 89020000 		.4byte	.LASF1
+ 1607 003e 03       		.uleb128 0x3
+ 1608 003f 48040000 		.4byte	.LASF3
+ 1609 0043 02       		.byte	0x2
+ 1610 0044 29       		.byte	0x29
+ 1611 0045 49000000 		.4byte	0x49
+ 1612 0049 02       		.uleb128 0x2
+ 1613 004a 02       		.byte	0x2
+ 1614 004b 05       		.byte	0x5
+ARM GAS  C:\Users\mame\AppData\Local\Temp\ccQcqcr0.s 			page 36
+
+
+ 1615 004c BD000000 		.4byte	.LASF4
+ 1616 0050 03       		.uleb128 0x3
+ 1617 0051 83010000 		.4byte	.LASF5
+ 1618 0055 02       		.byte	0x2
+ 1619 0056 2B       		.byte	0x2b
+ 1620 0057 5B000000 		.4byte	0x5b
+ 1621 005b 02       		.uleb128 0x2
+ 1622 005c 02       		.byte	0x2
+ 1623 005d 07       		.byte	0x7
+ 1624 005e 5A030000 		.4byte	.LASF6
+ 1625 0062 03       		.uleb128 0x3
+ 1626 0063 3E040000 		.4byte	.LASF7
+ 1627 0067 02       		.byte	0x2
+ 1628 0068 3F       		.byte	0x3f
+ 1629 0069 6D000000 		.4byte	0x6d
+ 1630 006d 02       		.uleb128 0x2
+ 1631 006e 04       		.byte	0x4
+ 1632 006f 05       		.byte	0x5
+ 1633 0070 87030000 		.4byte	.LASF8
+ 1634 0074 03       		.uleb128 0x3
+ 1635 0075 33040000 		.4byte	.LASF9
+ 1636 0079 02       		.byte	0x2
+ 1637 007a 41       		.byte	0x41
+ 1638 007b 7F000000 		.4byte	0x7f
+ 1639 007f 02       		.uleb128 0x2
+ 1640 0080 04       		.byte	0x4
+ 1641 0081 07       		.byte	0x7
+ 1642 0082 F7030000 		.4byte	.LASF10
+ 1643 0086 03       		.uleb128 0x3
+ 1644 0087 34020000 		.4byte	.LASF11
+ 1645 008b 02       		.byte	0x2
+ 1646 008c 59       		.byte	0x59
+ 1647 008d 91000000 		.4byte	0x91
+ 1648 0091 02       		.uleb128 0x2
+ 1649 0092 08       		.byte	0x8
+ 1650 0093 05       		.byte	0x5
+ 1651 0094 6A010000 		.4byte	.LASF12
+ 1652 0098 02       		.uleb128 0x2
+ 1653 0099 08       		.byte	0x8
+ 1654 009a 07       		.byte	0x7
+ 1655 009b DB020000 		.4byte	.LASF13
+ 1656 009f 04       		.uleb128 0x4
+ 1657 00a0 04       		.byte	0x4
+ 1658 00a1 05       		.byte	0x5
+ 1659 00a2 696E7400 		.ascii	"int\000"
+ 1660 00a6 02       		.uleb128 0x2
+ 1661 00a7 04       		.byte	0x4
+ 1662 00a8 07       		.byte	0x7
+ 1663 00a9 01030000 		.4byte	.LASF14
+ 1664 00ad 03       		.uleb128 0x3
+ 1665 00ae C2010000 		.4byte	.LASF15
+ 1666 00b2 03       		.byte	0x3
+ 1667 00b3 18       		.byte	0x18
+ 1668 00b4 2C000000 		.4byte	0x2c
+ 1669 00b8 03       		.uleb128 0x3
+ 1670 00b9 98030000 		.4byte	.LASF16
+ 1671 00bd 03       		.byte	0x3
+ARM GAS  C:\Users\mame\AppData\Local\Temp\ccQcqcr0.s 			page 37
+
+
+ 1672 00be 20       		.byte	0x20
+ 1673 00bf 3E000000 		.4byte	0x3e
+ 1674 00c3 03       		.uleb128 0x3
+ 1675 00c4 0E030000 		.4byte	.LASF17
+ 1676 00c8 03       		.byte	0x3
+ 1677 00c9 24       		.byte	0x24
+ 1678 00ca 50000000 		.4byte	0x50
+ 1679 00ce 03       		.uleb128 0x3
+ 1680 00cf 90030000 		.4byte	.LASF18
+ 1681 00d3 03       		.byte	0x3
+ 1682 00d4 2C       		.byte	0x2c
+ 1683 00d5 62000000 		.4byte	0x62
+ 1684 00d9 03       		.uleb128 0x3
+ 1685 00da F8020000 		.4byte	.LASF19
+ 1686 00de 03       		.byte	0x3
+ 1687 00df 30       		.byte	0x30
+ 1688 00e0 74000000 		.4byte	0x74
+ 1689 00e4 03       		.uleb128 0x3
+ 1690 00e5 A3010000 		.4byte	.LASF20
+ 1691 00e9 03       		.byte	0x3
+ 1692 00ea 38       		.byte	0x38
+ 1693 00eb 86000000 		.4byte	0x86
+ 1694 00ef 05       		.uleb128 0x5
+ 1695 00f0 D8010000 		.4byte	.LASF21
+ 1696 00f4 04       		.byte	0x4
+ 1697 00f5 9201     		.2byte	0x192
+ 1698 00f7 37000000 		.4byte	0x37
+ 1699 00fb 05       		.uleb128 0x5
+ 1700 00fc B4010000 		.4byte	.LASF22
+ 1701 0100 04       		.byte	0x4
+ 1702 0101 9301     		.2byte	0x193
+ 1703 0103 5B000000 		.4byte	0x5b
+ 1704 0107 02       		.uleb128 0x2
+ 1705 0108 04       		.byte	0x4
+ 1706 0109 04       		.byte	0x4
+ 1707 010a E5010000 		.4byte	.LASF23
+ 1708 010e 02       		.uleb128 0x2
+ 1709 010f 08       		.byte	0x8
+ 1710 0110 04       		.byte	0x4
+ 1711 0111 09040000 		.4byte	.LASF24
+ 1712 0115 02       		.uleb128 0x2
+ 1713 0116 01       		.byte	0x1
+ 1714 0117 08       		.byte	0x8
+ 1715 0118 6D030000 		.4byte	.LASF25
+ 1716 011c 02       		.uleb128 0x2
+ 1717 011d 08       		.byte	0x8
+ 1718 011e 04       		.byte	0x4
+ 1719 011f 62020000 		.4byte	.LASF26
+ 1720 0123 02       		.uleb128 0x2
+ 1721 0124 04       		.byte	0x4
+ 1722 0125 07       		.byte	0x7
+ 1723 0126 CE000000 		.4byte	.LASF27
+ 1724 012a 06       		.uleb128 0x6
+ 1725 012b 09       		.byte	0x9
+ 1726 012c 05       		.byte	0x5
+ 1727 012d 5E       		.byte	0x5e
+ 1728 012e 9F010000 		.4byte	0x19f
+ARM GAS  C:\Users\mame\AppData\Local\Temp\ccQcqcr0.s 			page 38
+
+
+ 1729 0132 07       		.uleb128 0x7
+ 1730 0133 25040000 		.4byte	.LASF28
+ 1731 0137 05       		.byte	0x5
+ 1732 0138 60       		.byte	0x60
+ 1733 0139 AD000000 		.4byte	0xad
+ 1734 013d 00       		.byte	0
+ 1735 013e 07       		.uleb128 0x7
+ 1736 013f 50000000 		.4byte	.LASF29
+ 1737 0143 05       		.byte	0x5
+ 1738 0144 61       		.byte	0x61
+ 1739 0145 AD000000 		.4byte	0xad
+ 1740 0149 01       		.byte	0x1
+ 1741 014a 07       		.uleb128 0x7
+ 1742 014b 42000000 		.4byte	.LASF30
+ 1743 014f 05       		.byte	0x5
+ 1744 0150 62       		.byte	0x62
+ 1745 0151 AD000000 		.4byte	0xad
+ 1746 0155 02       		.byte	0x2
+ 1747 0156 07       		.uleb128 0x7
+ 1748 0157 0A020000 		.4byte	.LASF31
+ 1749 015b 05       		.byte	0x5
+ 1750 015c 64       		.byte	0x64
+ 1751 015d AD000000 		.4byte	0xad
+ 1752 0161 03       		.byte	0x3
+ 1753 0162 07       		.uleb128 0x7
+ 1754 0163 6A040000 		.4byte	.LASF32
+ 1755 0167 05       		.byte	0x5
+ 1756 0168 65       		.byte	0x65
+ 1757 0169 AD000000 		.4byte	0xad
+ 1758 016d 04       		.byte	0x4
+ 1759 016e 07       		.uleb128 0x7
+ 1760 016f 96040000 		.4byte	.LASF33
+ 1761 0173 05       		.byte	0x5
+ 1762 0174 66       		.byte	0x66
+ 1763 0175 AD000000 		.4byte	0xad
+ 1764 0179 05       		.byte	0x5
+ 1765 017a 07       		.uleb128 0x7
+ 1766 017b 78000000 		.4byte	.LASF34
+ 1767 017f 05       		.byte	0x5
+ 1768 0180 67       		.byte	0x67
+ 1769 0181 AD000000 		.4byte	0xad
+ 1770 0185 06       		.byte	0x6
+ 1771 0186 07       		.uleb128 0x7
+ 1772 0187 00000000 		.4byte	.LASF35
+ 1773 018b 05       		.byte	0x5
+ 1774 018c 68       		.byte	0x68
+ 1775 018d AD000000 		.4byte	0xad
+ 1776 0191 07       		.byte	0x7
+ 1777 0192 07       		.uleb128 0x7
+ 1778 0193 AD000000 		.4byte	.LASF36
+ 1779 0197 05       		.byte	0x5
+ 1780 0198 69       		.byte	0x69
+ 1781 0199 AD000000 		.4byte	0xad
+ 1782 019d 08       		.byte	0x8
+ 1783 019e 00       		.byte	0
+ 1784 019f 03       		.uleb128 0x3
+ 1785 01a0 7A040000 		.4byte	.LASF37
+ARM GAS  C:\Users\mame\AppData\Local\Temp\ccQcqcr0.s 			page 39
+
+
+ 1786 01a4 05       		.byte	0x5
+ 1787 01a5 6B       		.byte	0x6b
+ 1788 01a6 2A010000 		.4byte	0x12a
+ 1789 01aa 06       		.uleb128 0x6
+ 1790 01ab 24       		.byte	0x24
+ 1791 01ac 05       		.byte	0x5
+ 1792 01ad 6F       		.byte	0x6f
+ 1793 01ae 8B020000 		.4byte	0x28b
+ 1794 01b2 07       		.uleb128 0x7
+ 1795 01b3 10040000 		.4byte	.LASF38
+ 1796 01b7 05       		.byte	0x5
+ 1797 01b8 70       		.byte	0x70
+ 1798 01b9 C3000000 		.4byte	0xc3
+ 1799 01bd 00       		.byte	0
+ 1800 01be 07       		.uleb128 0x7
+ 1801 01bf 17040000 		.4byte	.LASF39
+ 1802 01c3 05       		.byte	0x5
+ 1803 01c4 71       		.byte	0x71
+ 1804 01c5 B8000000 		.4byte	0xb8
+ 1805 01c9 02       		.byte	0x2
+ 1806 01ca 07       		.uleb128 0x7
+ 1807 01cb 1E040000 		.4byte	.LASF40
+ 1808 01cf 05       		.byte	0x5
+ 1809 01d0 72       		.byte	0x72
+ 1810 01d1 B8000000 		.4byte	0xb8
+ 1811 01d5 04       		.byte	0x4
+ 1812 01d6 07       		.uleb128 0x7
+ 1813 01d7 AC030000 		.4byte	.LASF41
+ 1814 01db 05       		.byte	0x5
+ 1815 01dc 74       		.byte	0x74
+ 1816 01dd C3000000 		.4byte	0xc3
+ 1817 01e1 06       		.byte	0x6
+ 1818 01e2 07       		.uleb128 0x7
+ 1819 01e3 BB010000 		.4byte	.LASF42
+ 1820 01e7 05       		.byte	0x5
+ 1821 01e8 75       		.byte	0x75
+ 1822 01e9 B8000000 		.4byte	0xb8
+ 1823 01ed 08       		.byte	0x8
+ 1824 01ee 07       		.uleb128 0x7
+ 1825 01ef 82020000 		.4byte	.LASF43
+ 1826 01f3 05       		.byte	0x5
+ 1827 01f4 76       		.byte	0x76
+ 1828 01f5 B8000000 		.4byte	0xb8
+ 1829 01f9 0A       		.byte	0xa
+ 1830 01fa 07       		.uleb128 0x7
+ 1831 01fb C1030000 		.4byte	.LASF44
+ 1832 01ff 05       		.byte	0x5
+ 1833 0200 77       		.byte	0x77
+ 1834 0201 B8000000 		.4byte	0xb8
+ 1835 0205 0C       		.byte	0xc
+ 1836 0206 07       		.uleb128 0x7
+ 1837 0207 C8030000 		.4byte	.LASF45
+ 1838 020b 05       		.byte	0x5
+ 1839 020c 78       		.byte	0x78
+ 1840 020d B8000000 		.4byte	0xb8
+ 1841 0211 0E       		.byte	0xe
+ 1842 0212 07       		.uleb128 0x7
+ARM GAS  C:\Users\mame\AppData\Local\Temp\ccQcqcr0.s 			page 40
+
+
+ 1843 0213 CF030000 		.4byte	.LASF46
+ 1844 0217 05       		.byte	0x5
+ 1845 0218 79       		.byte	0x79
+ 1846 0219 B8000000 		.4byte	0xb8
+ 1847 021d 10       		.byte	0x10
+ 1848 021e 07       		.uleb128 0x7
+ 1849 021f D6030000 		.4byte	.LASF47
+ 1850 0223 05       		.byte	0x5
+ 1851 0224 7A       		.byte	0x7a
+ 1852 0225 B8000000 		.4byte	0xb8
+ 1853 0229 12       		.byte	0x12
+ 1854 022a 07       		.uleb128 0x7
+ 1855 022b DD030000 		.4byte	.LASF48
+ 1856 022f 05       		.byte	0x5
+ 1857 0230 7B       		.byte	0x7b
+ 1858 0231 B8000000 		.4byte	0xb8
+ 1859 0235 14       		.byte	0x14
+ 1860 0236 07       		.uleb128 0x7
+ 1861 0237 E4030000 		.4byte	.LASF49
+ 1862 023b 05       		.byte	0x5
+ 1863 023c 7C       		.byte	0x7c
+ 1864 023d B8000000 		.4byte	0xb8
+ 1865 0241 16       		.byte	0x16
+ 1866 0242 07       		.uleb128 0x7
+ 1867 0243 17030000 		.4byte	.LASF50
+ 1868 0247 05       		.byte	0x5
+ 1869 0248 7E       		.byte	0x7e
+ 1870 0249 AD000000 		.4byte	0xad
+ 1871 024d 18       		.byte	0x18
+ 1872 024e 07       		.uleb128 0x7
+ 1873 024f 1E030000 		.4byte	.LASF51
+ 1874 0253 05       		.byte	0x5
+ 1875 0254 7F       		.byte	0x7f
+ 1876 0255 B8000000 		.4byte	0xb8
+ 1877 0259 1A       		.byte	0x1a
+ 1878 025a 07       		.uleb128 0x7
+ 1879 025b 25030000 		.4byte	.LASF52
+ 1880 025f 05       		.byte	0x5
+ 1881 0260 80       		.byte	0x80
+ 1882 0261 AD000000 		.4byte	0xad
+ 1883 0265 1C       		.byte	0x1c
+ 1884 0266 07       		.uleb128 0x7
+ 1885 0267 2C030000 		.4byte	.LASF53
+ 1886 026b 05       		.byte	0x5
+ 1887 026c 81       		.byte	0x81
+ 1888 026d B8000000 		.4byte	0xb8
+ 1889 0271 1E       		.byte	0x1e
+ 1890 0272 07       		.uleb128 0x7
+ 1891 0273 33030000 		.4byte	.LASF54
+ 1892 0277 05       		.byte	0x5
+ 1893 0278 82       		.byte	0x82
+ 1894 0279 B8000000 		.4byte	0xb8
+ 1895 027d 20       		.byte	0x20
+ 1896 027e 07       		.uleb128 0x7
+ 1897 027f 3A030000 		.4byte	.LASF55
+ 1898 0283 05       		.byte	0x5
+ 1899 0284 83       		.byte	0x83
+ARM GAS  C:\Users\mame\AppData\Local\Temp\ccQcqcr0.s 			page 41
+
+
+ 1900 0285 AD000000 		.4byte	0xad
+ 1901 0289 22       		.byte	0x22
+ 1902 028a 00       		.byte	0
+ 1903 028b 03       		.uleb128 0x3
+ 1904 028c 17000000 		.4byte	.LASF56
+ 1905 0290 05       		.byte	0x5
+ 1906 0291 85       		.byte	0x85
+ 1907 0292 AA010000 		.4byte	0x1aa
+ 1908 0296 06       		.uleb128 0x6
+ 1909 0297 40       		.byte	0x40
+ 1910 0298 05       		.byte	0x5
+ 1911 0299 89       		.byte	0x89
+ 1912 029a E6020000 		.4byte	0x2e6
+ 1913 029e 07       		.uleb128 0x7
+ 1914 029f EB010000 		.4byte	.LASF57
+ 1915 02a3 05       		.byte	0x5
+ 1916 02a4 8B       		.byte	0x8b
+ 1917 02a5 9F010000 		.4byte	0x19f
+ 1918 02a9 00       		.byte	0
+ 1919 02aa 07       		.uleb128 0x7
+ 1920 02ab 4C020000 		.4byte	.LASF58
+ 1921 02af 05       		.byte	0x5
+ 1922 02b0 8C       		.byte	0x8c
+ 1923 02b1 8B020000 		.4byte	0x28b
+ 1924 02b5 0A       		.byte	0xa
+ 1925 02b6 07       		.uleb128 0x7
+ 1926 02b7 45020000 		.4byte	.LASF59
+ 1927 02bb 05       		.byte	0x5
+ 1928 02bc 8D       		.byte	0x8d
+ 1929 02bd CE000000 		.4byte	0xce
+ 1930 02c1 30       		.byte	0x30
+ 1931 02c2 07       		.uleb128 0x7
+ 1932 02c3 AA040000 		.4byte	.LASF60
+ 1933 02c7 05       		.byte	0x5
+ 1934 02c8 8E       		.byte	0x8e
+ 1935 02c9 07010000 		.4byte	0x107
+ 1936 02cd 34       		.byte	0x34
+ 1937 02ce 07       		.uleb128 0x7
+ 1938 02cf B3030000 		.4byte	.LASF61
+ 1939 02d3 05       		.byte	0x5
+ 1940 02d4 8F       		.byte	0x8f
+ 1941 02d5 07010000 		.4byte	0x107
+ 1942 02d9 38       		.byte	0x38
+ 1943 02da 08       		.uleb128 0x8
+ 1944 02db 524800   		.ascii	"RH\000"
+ 1945 02de 05       		.byte	0x5
+ 1946 02df 90       		.byte	0x90
+ 1947 02e0 07010000 		.4byte	0x107
+ 1948 02e4 3C       		.byte	0x3c
+ 1949 02e5 00       		.byte	0
+ 1950 02e6 03       		.uleb128 0x3
+ 1951 02e7 C7000000 		.4byte	.LASF62
+ 1952 02eb 05       		.byte	0x5
+ 1953 02ec 91       		.byte	0x91
+ 1954 02ed 96020000 		.4byte	0x296
+ 1955 02f1 09       		.uleb128 0x9
+ 1956 02f2 F4010000 		.4byte	.LASF63
+ARM GAS  C:\Users\mame\AppData\Local\Temp\ccQcqcr0.s 			page 42
+
+
+ 1957 02f6 01       		.byte	0x1
+ 1958 02f7 36       		.byte	0x36
+ 1959 02f8 00000000 		.4byte	.LFB63
+ 1960 02fc 10000000 		.4byte	.LFE63-.LFB63
+ 1961 0300 01       		.uleb128 0x1
+ 1962 0301 9C       		.byte	0x9c
+ 1963 0302 09       		.uleb128 0x9
+ 1964 0303 EB030000 		.4byte	.LASF64
+ 1965 0307 01       		.byte	0x1
+ 1966 0308 3B       		.byte	0x3b
+ 1967 0309 00000000 		.4byte	.LFB64
+ 1968 030d 0C000000 		.4byte	.LFE64-.LFB64
+ 1969 0311 01       		.uleb128 0x1
+ 1970 0312 9C       		.byte	0x9c
+ 1971 0313 0A       		.uleb128 0xa
+ 1972 0314 A0030000 		.4byte	.LASF86
+ 1973 0318 01       		.byte	0x1
+ 1974 0319 48       		.byte	0x48
+ 1975 031a AD000000 		.4byte	0xad
+ 1976 031e 00000000 		.4byte	.LFB65
+ 1977 0322 EC020000 		.4byte	.LFE65-.LFB65
+ 1978 0326 01       		.uleb128 0x1
+ 1979 0327 9C       		.byte	0x9c
+ 1980 0328 49030000 		.4byte	0x349
+ 1981 032c 0B       		.uleb128 0xb
+ 1982 032d CA010000 		.4byte	.LASF65
+ 1983 0331 01       		.byte	0x1
+ 1984 0332 4B       		.byte	0x4b
+ 1985 0333 AD000000 		.4byte	0xad
+ 1986 0337 02       		.uleb128 0x2
+ 1987 0338 91       		.byte	0x91
+ 1988 0339 6F       		.sleb128 -17
+ 1989 033a 0B       		.uleb128 0xb
+ 1990 033b 8E010000 		.4byte	.LASF66
+ 1991 033f 01       		.byte	0x1
+ 1992 0340 4B       		.byte	0x4b
+ 1993 0341 AD000000 		.4byte	0xad
+ 1994 0345 02       		.uleb128 0x2
+ 1995 0346 91       		.byte	0x91
+ 1996 0347 6E       		.sleb128 -18
+ 1997 0348 00       		.byte	0
+ 1998 0349 09       		.uleb128 0x9
+ 1999 034a 52040000 		.4byte	.LASF67
+ 2000 034e 01       		.byte	0x1
+ 2001 034f 82       		.byte	0x82
+ 2002 0350 00000000 		.4byte	.LFB66
+ 2003 0354 10000000 		.4byte	.LFE66-.LFB66
+ 2004 0358 01       		.uleb128 0x1
+ 2005 0359 9C       		.byte	0x9c
+ 2006 035a 0C       		.uleb128 0xc
+ 2007 035b 41030000 		.4byte	.LASF72
+ 2008 035f 01       		.byte	0x1
+ 2009 0360 8D       		.byte	0x8d
+ 2010 0361 07010000 		.4byte	0x107
+ 2011 0365 00000000 		.4byte	.LFB67
+ 2012 0369 BC030000 		.4byte	.LFE67-.LFB67
+ 2013 036d 01       		.uleb128 0x1
+ARM GAS  C:\Users\mame\AppData\Local\Temp\ccQcqcr0.s 			page 43
+
+
+ 2014 036e 9C       		.byte	0x9c
+ 2015 036f AC030000 		.4byte	0x3ac
+ 2016 0373 0B       		.uleb128 0xb
+ 2017 0374 9D010000 		.4byte	.LASF68
+ 2018 0378 01       		.byte	0x1
+ 2019 0379 92       		.byte	0x92
+ 2020 037a CE000000 		.4byte	0xce
+ 2021 037e 02       		.uleb128 0x2
+ 2022 037f 91       		.byte	0x91
+ 2023 0380 5C       		.sleb128 -36
+ 2024 0381 0B       		.uleb128 0xb
+ 2025 0382 D7000000 		.4byte	.LASF69
+ 2026 0386 01       		.byte	0x1
+ 2027 0387 94       		.byte	0x94
+ 2028 0388 E4000000 		.4byte	0xe4
+ 2029 038c 02       		.uleb128 0x2
+ 2030 038d 91       		.byte	0x91
+ 2031 038e 50       		.sleb128 -48
+ 2032 038f 0B       		.uleb128 0xb
+ 2033 0390 78010000 		.4byte	.LASF70
+ 2034 0394 01       		.byte	0x1
+ 2035 0395 94       		.byte	0x94
+ 2036 0396 E4000000 		.4byte	0xe4
+ 2037 039a 02       		.uleb128 0x2
+ 2038 039b 91       		.byte	0x91
+ 2039 039c 48       		.sleb128 -56
+ 2040 039d 0B       		.uleb128 0xb
+ 2041 039e F2020000 		.4byte	.LASF71
+ 2042 03a2 01       		.byte	0x1
+ 2043 03a3 94       		.byte	0x94
+ 2044 03a4 E4000000 		.4byte	0xe4
+ 2045 03a8 02       		.uleb128 0x2
+ 2046 03a9 91       		.byte	0x91
+ 2047 03aa 40       		.sleb128 -64
+ 2048 03ab 00       		.byte	0
+ 2049 03ac 0C       		.uleb128 0xc
+ 2050 03ad 8E000000 		.4byte	.LASF73
+ 2051 03b1 01       		.byte	0x1
+ 2052 03b2 AA       		.byte	0xaa
+ 2053 03b3 07010000 		.4byte	0x107
+ 2054 03b7 00000000 		.4byte	.LFB68
+ 2055 03bb 80000000 		.4byte	.LFE68-.LFB68
+ 2056 03bf 01       		.uleb128 0x1
+ 2057 03c0 9C       		.byte	0x9c
+ 2058 03c1 D4030000 		.4byte	0x3d4
+ 2059 03c5 0B       		.uleb128 0xb
+ 2060 03c6 89040000 		.4byte	.LASF74
+ 2061 03ca 01       		.byte	0x1
+ 2062 03cb AC       		.byte	0xac
+ 2063 03cc 07010000 		.4byte	0x107
+ 2064 03d0 02       		.uleb128 0x2
+ 2065 03d1 91       		.byte	0x91
+ 2066 03d2 6C       		.sleb128 -20
+ 2067 03d3 00       		.byte	0
+ 2068 03d4 0C       		.uleb128 0xc
+ 2069 03d5 5B000000 		.4byte	.LASF75
+ 2070 03d9 01       		.byte	0x1
+ARM GAS  C:\Users\mame\AppData\Local\Temp\ccQcqcr0.s 			page 44
+
+
+ 2071 03da B3       		.byte	0xb3
+ 2072 03db 07010000 		.4byte	0x107
+ 2073 03df 00000000 		.4byte	.LFB69
+ 2074 03e3 48000000 		.4byte	.LFE69-.LFB69
+ 2075 03e7 01       		.uleb128 0x1
+ 2076 03e8 9C       		.byte	0x9c
+ 2077 03e9 FC030000 		.4byte	0x3fc
+ 2078 03ed 0B       		.uleb128 0xb
+ 2079 03ee 89040000 		.4byte	.LASF74
+ 2080 03f2 01       		.byte	0x1
+ 2081 03f3 B5       		.byte	0xb5
+ 2082 03f4 07010000 		.4byte	0x107
+ 2083 03f8 02       		.uleb128 0x2
+ 2084 03f9 91       		.byte	0x91
+ 2085 03fa 6C       		.sleb128 -20
+ 2086 03fb 00       		.byte	0
+ 2087 03fc 0C       		.uleb128 0xc
+ 2088 03fd 29000000 		.4byte	.LASF76
+ 2089 0401 01       		.byte	0x1
+ 2090 0402 C1       		.byte	0xc1
+ 2091 0403 07010000 		.4byte	0x107
+ 2092 0407 00000000 		.4byte	.LFB70
+ 2093 040b F4000000 		.4byte	.LFE70-.LFB70
+ 2094 040f 01       		.uleb128 0x1
+ 2095 0410 9C       		.byte	0x9c
+ 2096 0411 32040000 		.4byte	0x432
+ 2097 0415 0B       		.uleb128 0xb
+ 2098 0416 7D010000 		.4byte	.LASF77
+ 2099 041a 01       		.byte	0x1
+ 2100 041b C6       		.byte	0xc6
+ 2101 041c CE000000 		.4byte	0xce
+ 2102 0420 02       		.uleb128 0x2
+ 2103 0421 91       		.byte	0x91
+ 2104 0422 6C       		.sleb128 -20
+ 2105 0423 0B       		.uleb128 0xb
+ 2106 0424 D7000000 		.4byte	.LASF69
+ 2107 0428 01       		.byte	0x1
+ 2108 0429 C8       		.byte	0xc8
+ 2109 042a CE000000 		.4byte	0xce
+ 2110 042e 02       		.uleb128 0x2
+ 2111 042f 91       		.byte	0x91
+ 2112 0430 68       		.sleb128 -24
+ 2113 0431 00       		.byte	0
+ 2114 0432 0C       		.uleb128 0xc
+ 2115 0433 12020000 		.4byte	.LASF78
+ 2116 0437 01       		.byte	0x1
+ 2117 0438 DE       		.byte	0xde
+ 2118 0439 07010000 		.4byte	0x107
+ 2119 043d 00000000 		.4byte	.LFB71
+ 2120 0441 C8000000 		.4byte	.LFE71-.LFB71
+ 2121 0445 01       		.uleb128 0x1
+ 2122 0446 9C       		.byte	0x9c
+ 2123 0447 84040000 		.4byte	0x484
+ 2124 044b 0B       		.uleb128 0xb
+ 2125 044c 5F040000 		.4byte	.LASF79
+ 2126 0450 01       		.byte	0x1
+ 2127 0451 E4       		.byte	0xe4
+ARM GAS  C:\Users\mame\AppData\Local\Temp\ccQcqcr0.s 			page 45
+
+
+ 2128 0452 CE000000 		.4byte	0xce
+ 2129 0456 02       		.uleb128 0x2
+ 2130 0457 91       		.byte	0x91
+ 2131 0458 6C       		.sleb128 -20
+ 2132 0459 0B       		.uleb128 0xb
+ 2133 045a D7000000 		.4byte	.LASF69
+ 2134 045e 01       		.byte	0x1
+ 2135 045f E7       		.byte	0xe7
+ 2136 0460 E4000000 		.4byte	0xe4
+ 2137 0464 02       		.uleb128 0x2
+ 2138 0465 91       		.byte	0x91
+ 2139 0466 60       		.sleb128 -32
+ 2140 0467 0B       		.uleb128 0xb
+ 2141 0468 78010000 		.4byte	.LASF70
+ 2142 046c 01       		.byte	0x1
+ 2143 046d E7       		.byte	0xe7
+ 2144 046e E4000000 		.4byte	0xe4
+ 2145 0472 02       		.uleb128 0x2
+ 2146 0473 91       		.byte	0x91
+ 2147 0474 58       		.sleb128 -40
+ 2148 0475 0B       		.uleb128 0xb
+ 2149 0476 73040000 		.4byte	.LASF80
+ 2150 047a 01       		.byte	0x1
+ 2151 047b ED       		.byte	0xed
+ 2152 047c 07010000 		.4byte	0x107
+ 2153 0480 02       		.uleb128 0x2
+ 2154 0481 91       		.byte	0x91
+ 2155 0482 54       		.sleb128 -44
+ 2156 0483 00       		.byte	0
+ 2157 0484 0C       		.uleb128 0xc
+ 2158 0485 23020000 		.4byte	.LASF81
+ 2159 0489 01       		.byte	0x1
+ 2160 048a F5       		.byte	0xf5
+ 2161 048b 07010000 		.4byte	0x107
+ 2162 048f 00000000 		.4byte	.LFB72
+ 2163 0493 40000000 		.4byte	.LFE72-.LFB72
+ 2164 0497 01       		.uleb128 0x1
+ 2165 0498 9C       		.byte	0x9c
+ 2166 0499 AC040000 		.4byte	0x4ac
+ 2167 049d 0B       		.uleb128 0xb
+ 2168 049e 73040000 		.4byte	.LASF80
+ 2169 04a2 01       		.byte	0x1
+ 2170 04a3 F7       		.byte	0xf7
+ 2171 04a4 07010000 		.4byte	0x107
+ 2172 04a8 02       		.uleb128 0x2
+ 2173 04a9 91       		.byte	0x91
+ 2174 04aa 74       		.sleb128 -12
+ 2175 04ab 00       		.byte	0
+ 2176 04ac 0D       		.uleb128 0xd
+ 2177 04ad 6E020000 		.4byte	.LASF82
+ 2178 04b1 01       		.byte	0x1
+ 2179 04b2 0201     		.2byte	0x102
+ 2180 04b4 AD000000 		.4byte	0xad
+ 2181 04b8 00000000 		.4byte	.LFB73
+ 2182 04bc A4000000 		.4byte	.LFE73-.LFB73
+ 2183 04c0 01       		.uleb128 0x1
+ 2184 04c1 9C       		.byte	0x9c
+ARM GAS  C:\Users\mame\AppData\Local\Temp\ccQcqcr0.s 			page 46
+
+
+ 2185 04c2 03050000 		.4byte	0x503
+ 2186 04c6 0E       		.uleb128 0xe
+ 2187 04c7 3E020000 		.4byte	.LASF88
+ 2188 04cb 01       		.byte	0x1
+ 2189 04cc 0201     		.2byte	0x102
+ 2190 04ce AD000000 		.4byte	0xad
+ 2191 04d2 02       		.uleb128 0x2
+ 2192 04d3 91       		.byte	0x91
+ 2193 04d4 6F       		.sleb128 -17
+ 2194 04d5 0F       		.uleb128 0xf
+ 2195 04d6 10000000 		.4byte	.LASF83
+ 2196 04da 01       		.byte	0x1
+ 2197 04db 0501     		.2byte	0x105
+ 2198 04dd AD000000 		.4byte	0xad
+ 2199 04e1 02       		.uleb128 0x2
+ 2200 04e2 91       		.byte	0x91
+ 2201 04e3 74       		.sleb128 -12
+ 2202 04e4 0F       		.uleb128 0xf
+ 2203 04e5 AB010000 		.4byte	.LASF84
+ 2204 04e9 01       		.byte	0x1
+ 2205 04ea 0601     		.2byte	0x106
+ 2206 04ec AD000000 		.4byte	0xad
+ 2207 04f0 02       		.uleb128 0x2
+ 2208 04f1 91       		.byte	0x91
+ 2209 04f2 75       		.sleb128 -11
+ 2210 04f3 0F       		.uleb128 0xf
+ 2211 04f4 65040000 		.4byte	.LASF85
+ 2212 04f8 01       		.byte	0x1
+ 2213 04f9 0801     		.2byte	0x108
+ 2214 04fb FB000000 		.4byte	0xfb
+ 2215 04ff 02       		.uleb128 0x2
+ 2216 0500 91       		.byte	0x91
+ 2217 0501 76       		.sleb128 -10
+ 2218 0502 00       		.byte	0
+ 2219 0503 10       		.uleb128 0x10
+ 2220 0504 72030000 		.4byte	.LASF87
+ 2221 0508 01       		.byte	0x1
+ 2222 0509 3701     		.2byte	0x137
+ 2223 050b 00000000 		.4byte	.LFB74
+ 2224 050f 78000000 		.4byte	.LFE74-.LFB74
+ 2225 0513 01       		.uleb128 0x1
+ 2226 0514 9C       		.byte	0x9c
+ 2227 0515 56050000 		.4byte	0x556
+ 2228 0519 0E       		.uleb128 0xe
+ 2229 051a 3E020000 		.4byte	.LASF88
+ 2230 051e 01       		.byte	0x1
+ 2231 051f 3701     		.2byte	0x137
+ 2232 0521 AD000000 		.4byte	0xad
+ 2233 0525 02       		.uleb128 0x2
+ 2234 0526 91       		.byte	0x91
+ 2235 0527 6F       		.sleb128 -17
+ 2236 0528 0E       		.uleb128 0xe
+ 2237 0529 BC030000 		.4byte	.LASF89
+ 2238 052d 01       		.byte	0x1
+ 2239 052e 3701     		.2byte	0x137
+ 2240 0530 AD000000 		.4byte	0xad
+ 2241 0534 02       		.uleb128 0x2
+ARM GAS  C:\Users\mame\AppData\Local\Temp\ccQcqcr0.s 			page 47
+
+
+ 2242 0535 91       		.byte	0x91
+ 2243 0536 6E       		.sleb128 -18
+ 2244 0537 0F       		.uleb128 0xf
+ 2245 0538 DE010000 		.4byte	.LASF90
+ 2246 053c 01       		.byte	0x1
+ 2247 053d 3901     		.2byte	0x139
+ 2248 053f 56050000 		.4byte	0x556
+ 2249 0543 02       		.uleb128 0x2
+ 2250 0544 91       		.byte	0x91
+ 2251 0545 74       		.sleb128 -12
+ 2252 0546 0F       		.uleb128 0xf
+ 2253 0547 65040000 		.4byte	.LASF85
+ 2254 054b 01       		.byte	0x1
+ 2255 054c 3A01     		.2byte	0x13a
+ 2256 054e FB000000 		.4byte	0xfb
+ 2257 0552 02       		.uleb128 0x2
+ 2258 0553 91       		.byte	0x91
+ 2259 0554 76       		.sleb128 -10
+ 2260 0555 00       		.byte	0
+ 2261 0556 11       		.uleb128 0x11
+ 2262 0557 EF000000 		.4byte	0xef
+ 2263 055b 66050000 		.4byte	0x566
+ 2264 055f 12       		.uleb128 0x12
+ 2265 0560 23010000 		.4byte	0x123
+ 2266 0564 01       		.byte	0x1
+ 2267 0565 00       		.byte	0
+ 2268 0566 13       		.uleb128 0x13
+ 2269 0567 9D040000 		.4byte	.LASF91
+ 2270 056b 06       		.byte	0x6
+ 2271 056c 1207     		.2byte	0x712
+ 2272 056e 72050000 		.4byte	0x572
+ 2273 0572 14       		.uleb128 0x14
+ 2274 0573 CE000000 		.4byte	0xce
+ 2275 0577 15       		.uleb128 0x15
+ 2276 0578 87000000 		.4byte	.LASF92
+ 2277 057c 01       		.byte	0x1
+ 2278 057d 22       		.byte	0x22
+ 2279 057e E6020000 		.4byte	0x2e6
+ 2280 0582 05       		.uleb128 0x5
+ 2281 0583 03       		.byte	0x3
+ 2282 0584 00000000 		.4byte	bme280
+ 2283 0588 00       		.byte	0
+ 2284              		.section	.debug_abbrev,"",%progbits
+ 2285              	.Ldebug_abbrev0:
+ 2286 0000 01       		.uleb128 0x1
+ 2287 0001 11       		.uleb128 0x11
+ 2288 0002 01       		.byte	0x1
+ 2289 0003 25       		.uleb128 0x25
+ 2290 0004 0E       		.uleb128 0xe
+ 2291 0005 13       		.uleb128 0x13
+ 2292 0006 0B       		.uleb128 0xb
+ 2293 0007 03       		.uleb128 0x3
+ 2294 0008 0E       		.uleb128 0xe
+ 2295 0009 1B       		.uleb128 0x1b
+ 2296 000a 0E       		.uleb128 0xe
+ 2297 000b 55       		.uleb128 0x55
+ 2298 000c 17       		.uleb128 0x17
+ARM GAS  C:\Users\mame\AppData\Local\Temp\ccQcqcr0.s 			page 48
+
+
+ 2299 000d 11       		.uleb128 0x11
+ 2300 000e 01       		.uleb128 0x1
+ 2301 000f 10       		.uleb128 0x10
+ 2302 0010 17       		.uleb128 0x17
+ 2303 0011 00       		.byte	0
+ 2304 0012 00       		.byte	0
+ 2305 0013 02       		.uleb128 0x2
+ 2306 0014 24       		.uleb128 0x24
+ 2307 0015 00       		.byte	0
+ 2308 0016 0B       		.uleb128 0xb
+ 2309 0017 0B       		.uleb128 0xb
+ 2310 0018 3E       		.uleb128 0x3e
+ 2311 0019 0B       		.uleb128 0xb
+ 2312 001a 03       		.uleb128 0x3
+ 2313 001b 0E       		.uleb128 0xe
+ 2314 001c 00       		.byte	0
+ 2315 001d 00       		.byte	0
+ 2316 001e 03       		.uleb128 0x3
+ 2317 001f 16       		.uleb128 0x16
+ 2318 0020 00       		.byte	0
+ 2319 0021 03       		.uleb128 0x3
+ 2320 0022 0E       		.uleb128 0xe
+ 2321 0023 3A       		.uleb128 0x3a
+ 2322 0024 0B       		.uleb128 0xb
+ 2323 0025 3B       		.uleb128 0x3b
+ 2324 0026 0B       		.uleb128 0xb
+ 2325 0027 49       		.uleb128 0x49
+ 2326 0028 13       		.uleb128 0x13
+ 2327 0029 00       		.byte	0
+ 2328 002a 00       		.byte	0
+ 2329 002b 04       		.uleb128 0x4
+ 2330 002c 24       		.uleb128 0x24
+ 2331 002d 00       		.byte	0
+ 2332 002e 0B       		.uleb128 0xb
+ 2333 002f 0B       		.uleb128 0xb
+ 2334 0030 3E       		.uleb128 0x3e
+ 2335 0031 0B       		.uleb128 0xb
+ 2336 0032 03       		.uleb128 0x3
+ 2337 0033 08       		.uleb128 0x8
+ 2338 0034 00       		.byte	0
+ 2339 0035 00       		.byte	0
+ 2340 0036 05       		.uleb128 0x5
+ 2341 0037 16       		.uleb128 0x16
+ 2342 0038 00       		.byte	0
+ 2343 0039 03       		.uleb128 0x3
+ 2344 003a 0E       		.uleb128 0xe
+ 2345 003b 3A       		.uleb128 0x3a
+ 2346 003c 0B       		.uleb128 0xb
+ 2347 003d 3B       		.uleb128 0x3b
+ 2348 003e 05       		.uleb128 0x5
+ 2349 003f 49       		.uleb128 0x49
+ 2350 0040 13       		.uleb128 0x13
+ 2351 0041 00       		.byte	0
+ 2352 0042 00       		.byte	0
+ 2353 0043 06       		.uleb128 0x6
+ 2354 0044 13       		.uleb128 0x13
+ 2355 0045 01       		.byte	0x1
+ARM GAS  C:\Users\mame\AppData\Local\Temp\ccQcqcr0.s 			page 49
+
+
+ 2356 0046 0B       		.uleb128 0xb
+ 2357 0047 0B       		.uleb128 0xb
+ 2358 0048 3A       		.uleb128 0x3a
+ 2359 0049 0B       		.uleb128 0xb
+ 2360 004a 3B       		.uleb128 0x3b
+ 2361 004b 0B       		.uleb128 0xb
+ 2362 004c 01       		.uleb128 0x1
+ 2363 004d 13       		.uleb128 0x13
+ 2364 004e 00       		.byte	0
+ 2365 004f 00       		.byte	0
+ 2366 0050 07       		.uleb128 0x7
+ 2367 0051 0D       		.uleb128 0xd
+ 2368 0052 00       		.byte	0
+ 2369 0053 03       		.uleb128 0x3
+ 2370 0054 0E       		.uleb128 0xe
+ 2371 0055 3A       		.uleb128 0x3a
+ 2372 0056 0B       		.uleb128 0xb
+ 2373 0057 3B       		.uleb128 0x3b
+ 2374 0058 0B       		.uleb128 0xb
+ 2375 0059 49       		.uleb128 0x49
+ 2376 005a 13       		.uleb128 0x13
+ 2377 005b 38       		.uleb128 0x38
+ 2378 005c 0B       		.uleb128 0xb
+ 2379 005d 00       		.byte	0
+ 2380 005e 00       		.byte	0
+ 2381 005f 08       		.uleb128 0x8
+ 2382 0060 0D       		.uleb128 0xd
+ 2383 0061 00       		.byte	0
+ 2384 0062 03       		.uleb128 0x3
+ 2385 0063 08       		.uleb128 0x8
+ 2386 0064 3A       		.uleb128 0x3a
+ 2387 0065 0B       		.uleb128 0xb
+ 2388 0066 3B       		.uleb128 0x3b
+ 2389 0067 0B       		.uleb128 0xb
+ 2390 0068 49       		.uleb128 0x49
+ 2391 0069 13       		.uleb128 0x13
+ 2392 006a 38       		.uleb128 0x38
+ 2393 006b 0B       		.uleb128 0xb
+ 2394 006c 00       		.byte	0
+ 2395 006d 00       		.byte	0
+ 2396 006e 09       		.uleb128 0x9
+ 2397 006f 2E       		.uleb128 0x2e
+ 2398 0070 00       		.byte	0
+ 2399 0071 3F       		.uleb128 0x3f
+ 2400 0072 19       		.uleb128 0x19
+ 2401 0073 03       		.uleb128 0x3
+ 2402 0074 0E       		.uleb128 0xe
+ 2403 0075 3A       		.uleb128 0x3a
+ 2404 0076 0B       		.uleb128 0xb
+ 2405 0077 3B       		.uleb128 0x3b
+ 2406 0078 0B       		.uleb128 0xb
+ 2407 0079 11       		.uleb128 0x11
+ 2408 007a 01       		.uleb128 0x1
+ 2409 007b 12       		.uleb128 0x12
+ 2410 007c 06       		.uleb128 0x6
+ 2411 007d 40       		.uleb128 0x40
+ 2412 007e 18       		.uleb128 0x18
+ARM GAS  C:\Users\mame\AppData\Local\Temp\ccQcqcr0.s 			page 50
+
+
+ 2413 007f 9642     		.uleb128 0x2116
+ 2414 0081 19       		.uleb128 0x19
+ 2415 0082 00       		.byte	0
+ 2416 0083 00       		.byte	0
+ 2417 0084 0A       		.uleb128 0xa
+ 2418 0085 2E       		.uleb128 0x2e
+ 2419 0086 01       		.byte	0x1
+ 2420 0087 3F       		.uleb128 0x3f
+ 2421 0088 19       		.uleb128 0x19
+ 2422 0089 03       		.uleb128 0x3
+ 2423 008a 0E       		.uleb128 0xe
+ 2424 008b 3A       		.uleb128 0x3a
+ 2425 008c 0B       		.uleb128 0xb
+ 2426 008d 3B       		.uleb128 0x3b
+ 2427 008e 0B       		.uleb128 0xb
+ 2428 008f 49       		.uleb128 0x49
+ 2429 0090 13       		.uleb128 0x13
+ 2430 0091 11       		.uleb128 0x11
+ 2431 0092 01       		.uleb128 0x1
+ 2432 0093 12       		.uleb128 0x12
+ 2433 0094 06       		.uleb128 0x6
+ 2434 0095 40       		.uleb128 0x40
+ 2435 0096 18       		.uleb128 0x18
+ 2436 0097 9642     		.uleb128 0x2116
+ 2437 0099 19       		.uleb128 0x19
+ 2438 009a 01       		.uleb128 0x1
+ 2439 009b 13       		.uleb128 0x13
+ 2440 009c 00       		.byte	0
+ 2441 009d 00       		.byte	0
+ 2442 009e 0B       		.uleb128 0xb
+ 2443 009f 34       		.uleb128 0x34
+ 2444 00a0 00       		.byte	0
+ 2445 00a1 03       		.uleb128 0x3
+ 2446 00a2 0E       		.uleb128 0xe
+ 2447 00a3 3A       		.uleb128 0x3a
+ 2448 00a4 0B       		.uleb128 0xb
+ 2449 00a5 3B       		.uleb128 0x3b
+ 2450 00a6 0B       		.uleb128 0xb
+ 2451 00a7 49       		.uleb128 0x49
+ 2452 00a8 13       		.uleb128 0x13
+ 2453 00a9 02       		.uleb128 0x2
+ 2454 00aa 18       		.uleb128 0x18
+ 2455 00ab 00       		.byte	0
+ 2456 00ac 00       		.byte	0
+ 2457 00ad 0C       		.uleb128 0xc
+ 2458 00ae 2E       		.uleb128 0x2e
+ 2459 00af 01       		.byte	0x1
+ 2460 00b0 3F       		.uleb128 0x3f
+ 2461 00b1 19       		.uleb128 0x19
+ 2462 00b2 03       		.uleb128 0x3
+ 2463 00b3 0E       		.uleb128 0xe
+ 2464 00b4 3A       		.uleb128 0x3a
+ 2465 00b5 0B       		.uleb128 0xb
+ 2466 00b6 3B       		.uleb128 0x3b
+ 2467 00b7 0B       		.uleb128 0xb
+ 2468 00b8 27       		.uleb128 0x27
+ 2469 00b9 19       		.uleb128 0x19
+ARM GAS  C:\Users\mame\AppData\Local\Temp\ccQcqcr0.s 			page 51
+
+
+ 2470 00ba 49       		.uleb128 0x49
+ 2471 00bb 13       		.uleb128 0x13
+ 2472 00bc 11       		.uleb128 0x11
+ 2473 00bd 01       		.uleb128 0x1
+ 2474 00be 12       		.uleb128 0x12
+ 2475 00bf 06       		.uleb128 0x6
+ 2476 00c0 40       		.uleb128 0x40
+ 2477 00c1 18       		.uleb128 0x18
+ 2478 00c2 9642     		.uleb128 0x2116
+ 2479 00c4 19       		.uleb128 0x19
+ 2480 00c5 01       		.uleb128 0x1
+ 2481 00c6 13       		.uleb128 0x13
+ 2482 00c7 00       		.byte	0
+ 2483 00c8 00       		.byte	0
+ 2484 00c9 0D       		.uleb128 0xd
+ 2485 00ca 2E       		.uleb128 0x2e
+ 2486 00cb 01       		.byte	0x1
+ 2487 00cc 3F       		.uleb128 0x3f
+ 2488 00cd 19       		.uleb128 0x19
+ 2489 00ce 03       		.uleb128 0x3
+ 2490 00cf 0E       		.uleb128 0xe
+ 2491 00d0 3A       		.uleb128 0x3a
+ 2492 00d1 0B       		.uleb128 0xb
+ 2493 00d2 3B       		.uleb128 0x3b
+ 2494 00d3 05       		.uleb128 0x5
+ 2495 00d4 27       		.uleb128 0x27
+ 2496 00d5 19       		.uleb128 0x19
+ 2497 00d6 49       		.uleb128 0x49
+ 2498 00d7 13       		.uleb128 0x13
+ 2499 00d8 11       		.uleb128 0x11
+ 2500 00d9 01       		.uleb128 0x1
+ 2501 00da 12       		.uleb128 0x12
+ 2502 00db 06       		.uleb128 0x6
+ 2503 00dc 40       		.uleb128 0x40
+ 2504 00dd 18       		.uleb128 0x18
+ 2505 00de 9642     		.uleb128 0x2116
+ 2506 00e0 19       		.uleb128 0x19
+ 2507 00e1 01       		.uleb128 0x1
+ 2508 00e2 13       		.uleb128 0x13
+ 2509 00e3 00       		.byte	0
+ 2510 00e4 00       		.byte	0
+ 2511 00e5 0E       		.uleb128 0xe
+ 2512 00e6 05       		.uleb128 0x5
+ 2513 00e7 00       		.byte	0
+ 2514 00e8 03       		.uleb128 0x3
+ 2515 00e9 0E       		.uleb128 0xe
+ 2516 00ea 3A       		.uleb128 0x3a
+ 2517 00eb 0B       		.uleb128 0xb
+ 2518 00ec 3B       		.uleb128 0x3b
+ 2519 00ed 05       		.uleb128 0x5
+ 2520 00ee 49       		.uleb128 0x49
+ 2521 00ef 13       		.uleb128 0x13
+ 2522 00f0 02       		.uleb128 0x2
+ 2523 00f1 18       		.uleb128 0x18
+ 2524 00f2 00       		.byte	0
+ 2525 00f3 00       		.byte	0
+ 2526 00f4 0F       		.uleb128 0xf
+ARM GAS  C:\Users\mame\AppData\Local\Temp\ccQcqcr0.s 			page 52
+
+
+ 2527 00f5 34       		.uleb128 0x34
+ 2528 00f6 00       		.byte	0
+ 2529 00f7 03       		.uleb128 0x3
+ 2530 00f8 0E       		.uleb128 0xe
+ 2531 00f9 3A       		.uleb128 0x3a
+ 2532 00fa 0B       		.uleb128 0xb
+ 2533 00fb 3B       		.uleb128 0x3b
+ 2534 00fc 05       		.uleb128 0x5
+ 2535 00fd 49       		.uleb128 0x49
+ 2536 00fe 13       		.uleb128 0x13
+ 2537 00ff 02       		.uleb128 0x2
+ 2538 0100 18       		.uleb128 0x18
+ 2539 0101 00       		.byte	0
+ 2540 0102 00       		.byte	0
+ 2541 0103 10       		.uleb128 0x10
+ 2542 0104 2E       		.uleb128 0x2e
+ 2543 0105 01       		.byte	0x1
+ 2544 0106 3F       		.uleb128 0x3f
+ 2545 0107 19       		.uleb128 0x19
+ 2546 0108 03       		.uleb128 0x3
+ 2547 0109 0E       		.uleb128 0xe
+ 2548 010a 3A       		.uleb128 0x3a
+ 2549 010b 0B       		.uleb128 0xb
+ 2550 010c 3B       		.uleb128 0x3b
+ 2551 010d 05       		.uleb128 0x5
+ 2552 010e 27       		.uleb128 0x27
+ 2553 010f 19       		.uleb128 0x19
+ 2554 0110 11       		.uleb128 0x11
+ 2555 0111 01       		.uleb128 0x1
+ 2556 0112 12       		.uleb128 0x12
+ 2557 0113 06       		.uleb128 0x6
+ 2558 0114 40       		.uleb128 0x40
+ 2559 0115 18       		.uleb128 0x18
+ 2560 0116 9642     		.uleb128 0x2116
+ 2561 0118 19       		.uleb128 0x19
+ 2562 0119 01       		.uleb128 0x1
+ 2563 011a 13       		.uleb128 0x13
+ 2564 011b 00       		.byte	0
+ 2565 011c 00       		.byte	0
+ 2566 011d 11       		.uleb128 0x11
+ 2567 011e 01       		.uleb128 0x1
+ 2568 011f 01       		.byte	0x1
+ 2569 0120 49       		.uleb128 0x49
+ 2570 0121 13       		.uleb128 0x13
+ 2571 0122 01       		.uleb128 0x1
+ 2572 0123 13       		.uleb128 0x13
+ 2573 0124 00       		.byte	0
+ 2574 0125 00       		.byte	0
+ 2575 0126 12       		.uleb128 0x12
+ 2576 0127 21       		.uleb128 0x21
+ 2577 0128 00       		.byte	0
+ 2578 0129 49       		.uleb128 0x49
+ 2579 012a 13       		.uleb128 0x13
+ 2580 012b 2F       		.uleb128 0x2f
+ 2581 012c 0B       		.uleb128 0xb
+ 2582 012d 00       		.byte	0
+ 2583 012e 00       		.byte	0
+ARM GAS  C:\Users\mame\AppData\Local\Temp\ccQcqcr0.s 			page 53
+
+
+ 2584 012f 13       		.uleb128 0x13
+ 2585 0130 34       		.uleb128 0x34
+ 2586 0131 00       		.byte	0
+ 2587 0132 03       		.uleb128 0x3
+ 2588 0133 0E       		.uleb128 0xe
+ 2589 0134 3A       		.uleb128 0x3a
+ 2590 0135 0B       		.uleb128 0xb
+ 2591 0136 3B       		.uleb128 0x3b
+ 2592 0137 05       		.uleb128 0x5
+ 2593 0138 49       		.uleb128 0x49
+ 2594 0139 13       		.uleb128 0x13
+ 2595 013a 3F       		.uleb128 0x3f
+ 2596 013b 19       		.uleb128 0x19
+ 2597 013c 3C       		.uleb128 0x3c
+ 2598 013d 19       		.uleb128 0x19
+ 2599 013e 00       		.byte	0
+ 2600 013f 00       		.byte	0
+ 2601 0140 14       		.uleb128 0x14
+ 2602 0141 35       		.uleb128 0x35
+ 2603 0142 00       		.byte	0
+ 2604 0143 49       		.uleb128 0x49
+ 2605 0144 13       		.uleb128 0x13
+ 2606 0145 00       		.byte	0
+ 2607 0146 00       		.byte	0
+ 2608 0147 15       		.uleb128 0x15
+ 2609 0148 34       		.uleb128 0x34
+ 2610 0149 00       		.byte	0
+ 2611 014a 03       		.uleb128 0x3
+ 2612 014b 0E       		.uleb128 0xe
+ 2613 014c 3A       		.uleb128 0x3a
+ 2614 014d 0B       		.uleb128 0xb
+ 2615 014e 3B       		.uleb128 0x3b
+ 2616 014f 0B       		.uleb128 0xb
+ 2617 0150 49       		.uleb128 0x49
+ 2618 0151 13       		.uleb128 0x13
+ 2619 0152 3F       		.uleb128 0x3f
+ 2620 0153 19       		.uleb128 0x19
+ 2621 0154 02       		.uleb128 0x2
+ 2622 0155 18       		.uleb128 0x18
+ 2623 0156 00       		.byte	0
+ 2624 0157 00       		.byte	0
+ 2625 0158 00       		.byte	0
+ 2626              		.section	.debug_aranges,"",%progbits
+ 2627 0000 74000000 		.4byte	0x74
+ 2628 0004 0200     		.2byte	0x2
+ 2629 0006 00000000 		.4byte	.Ldebug_info0
+ 2630 000a 04       		.byte	0x4
+ 2631 000b 00       		.byte	0
+ 2632 000c 0000     		.2byte	0
+ 2633 000e 0000     		.2byte	0
+ 2634 0010 00000000 		.4byte	.LFB63
+ 2635 0014 10000000 		.4byte	.LFE63-.LFB63
+ 2636 0018 00000000 		.4byte	.LFB64
+ 2637 001c 0C000000 		.4byte	.LFE64-.LFB64
+ 2638 0020 00000000 		.4byte	.LFB65
+ 2639 0024 EC020000 		.4byte	.LFE65-.LFB65
+ 2640 0028 00000000 		.4byte	.LFB66
+ARM GAS  C:\Users\mame\AppData\Local\Temp\ccQcqcr0.s 			page 54
+
+
+ 2641 002c 10000000 		.4byte	.LFE66-.LFB66
+ 2642 0030 00000000 		.4byte	.LFB67
+ 2643 0034 BC030000 		.4byte	.LFE67-.LFB67
+ 2644 0038 00000000 		.4byte	.LFB68
+ 2645 003c 80000000 		.4byte	.LFE68-.LFB68
+ 2646 0040 00000000 		.4byte	.LFB69
+ 2647 0044 48000000 		.4byte	.LFE69-.LFB69
+ 2648 0048 00000000 		.4byte	.LFB70
+ 2649 004c F4000000 		.4byte	.LFE70-.LFB70
+ 2650 0050 00000000 		.4byte	.LFB71
+ 2651 0054 C8000000 		.4byte	.LFE71-.LFB71
+ 2652 0058 00000000 		.4byte	.LFB72
+ 2653 005c 40000000 		.4byte	.LFE72-.LFB72
+ 2654 0060 00000000 		.4byte	.LFB73
+ 2655 0064 A4000000 		.4byte	.LFE73-.LFB73
+ 2656 0068 00000000 		.4byte	.LFB74
+ 2657 006c 78000000 		.4byte	.LFE74-.LFB74
+ 2658 0070 00000000 		.4byte	0
+ 2659 0074 00000000 		.4byte	0
+ 2660              		.section	.debug_ranges,"",%progbits
+ 2661              	.Ldebug_ranges0:
+ 2662 0000 00000000 		.4byte	.LFB63
+ 2663 0004 10000000 		.4byte	.LFE63
+ 2664 0008 00000000 		.4byte	.LFB64
+ 2665 000c 0C000000 		.4byte	.LFE64
+ 2666 0010 00000000 		.4byte	.LFB65
+ 2667 0014 EC020000 		.4byte	.LFE65
+ 2668 0018 00000000 		.4byte	.LFB66
+ 2669 001c 10000000 		.4byte	.LFE66
+ 2670 0020 00000000 		.4byte	.LFB67
+ 2671 0024 BC030000 		.4byte	.LFE67
+ 2672 0028 00000000 		.4byte	.LFB68
+ 2673 002c 80000000 		.4byte	.LFE68
+ 2674 0030 00000000 		.4byte	.LFB69
+ 2675 0034 48000000 		.4byte	.LFE69
+ 2676 0038 00000000 		.4byte	.LFB70
+ 2677 003c F4000000 		.4byte	.LFE70
+ 2678 0040 00000000 		.4byte	.LFB71
+ 2679 0044 C8000000 		.4byte	.LFE71
+ 2680 0048 00000000 		.4byte	.LFB72
+ 2681 004c 40000000 		.4byte	.LFE72
+ 2682 0050 00000000 		.4byte	.LFB73
+ 2683 0054 A4000000 		.4byte	.LFE73
+ 2684 0058 00000000 		.4byte	.LFB74
+ 2685 005c 78000000 		.4byte	.LFE74
+ 2686 0060 00000000 		.4byte	0
+ 2687 0064 00000000 		.4byte	0
+ 2688              		.section	.debug_line,"",%progbits
+ 2689              	.Ldebug_line0:
+ 2690 0000 E2020000 		.section	.debug_str,"MS",%progbits,1
+ 2690      02004E01 
+ 2690      00000201 
+ 2690      FB0E0D00 
+ 2690      01010101 
+ 2691              	.LASF35:
+ 2692 0000 70726573 		.ascii	"pressOverSample\000"
+ 2692      734F7665 
+ARM GAS  C:\Users\mame\AppData\Local\Temp\ccQcqcr0.s 			page 55
+
+
+ 2692      7253616D 
+ 2692      706C6500 
+ 2693              	.LASF83:
+ 2694 0010 72657375 		.ascii	"result\000"
+ 2694      6C7400
+ 2695              	.LASF56:
+ 2696 0017 53656E73 		.ascii	"SensorCalibration\000"
+ 2696      6F724361 
+ 2696      6C696272 
+ 2696      6174696F 
+ 2696      6E00
+ 2697              	.LASF76:
+ 2698 0029 424D4532 		.ascii	"BME280_readFloatHumidity\000"
+ 2698      38305F72 
+ 2698      65616446 
+ 2698      6C6F6174 
+ 2698      48756D69 
+ 2699              	.LASF30:
+ 2700 0042 63686970 		.ascii	"chipSelectPin\000"
+ 2700      53656C65 
+ 2700      63745069 
+ 2700      6E00
+ 2701              	.LASF29:
+ 2702 0050 49324341 		.ascii	"I2CAddress\000"
+ 2702      64647265 
+ 2702      737300
+ 2703              	.LASF75:
+ 2704 005b 424D4532 		.ascii	"BME280_readFloatAltitudeFeet\000"
+ 2704      38305F72 
+ 2704      65616446 
+ 2704      6C6F6174 
+ 2704      416C7469 
+ 2705              	.LASF34:
+ 2706 0078 74656D70 		.ascii	"tempOverSample\000"
+ 2706      4F766572 
+ 2706      53616D70 
+ 2706      6C6500
+ 2707              	.LASF92:
+ 2708 0087 626D6532 		.ascii	"bme280\000"
+ 2708      383000
+ 2709              	.LASF73:
+ 2710 008e 424D4532 		.ascii	"BME280_readFloatAltitudeMeters\000"
+ 2710      38305F72 
+ 2710      65616446 
+ 2710      6C6F6174 
+ 2710      416C7469 
+ 2711              	.LASF36:
+ 2712 00ad 68756D69 		.ascii	"humidOverSample\000"
+ 2712      644F7665 
+ 2712      7253616D 
+ 2712      706C6500 
+ 2713              	.LASF4:
+ 2714 00bd 73686F72 		.ascii	"short int\000"
+ 2714      7420696E 
+ 2714      7400
+ 2715              	.LASF62:
+ 2716 00c7 424D4532 		.ascii	"BME280\000"
+ARM GAS  C:\Users\mame\AppData\Local\Temp\ccQcqcr0.s 			page 56
+
+
+ 2716      383000
+ 2717              	.LASF27:
+ 2718 00ce 73697A65 		.ascii	"sizetype\000"
+ 2718      74797065 
+ 2718      00
+ 2719              	.LASF69:
+ 2720 00d7 76617231 		.ascii	"var1\000"
+ 2720      00
+ 2721              	.LASF93:
+ 2722 00dc 474E5520 		.ascii	"GNU C11 5.4.1 20160609 (release) [ARM/embedded-5-br"
+ 2722      43313120 
+ 2722      352E342E 
+ 2722      31203230 
+ 2722      31363036 
+ 2723 010f 616E6368 		.ascii	"anch revision 237715] -mcpu=cortex-m3 -mthumb -g -O"
+ 2723      20726576 
+ 2723      6973696F 
+ 2723      6E203233 
+ 2723      37373135 
+ 2724 0142 30202D66 		.ascii	"0 -ffunction-sections -ffat-lto-objects\000"
+ 2724      66756E63 
+ 2724      74696F6E 
+ 2724      2D736563 
+ 2724      74696F6E 
+ 2725              	.LASF12:
+ 2726 016a 6C6F6E67 		.ascii	"long long int\000"
+ 2726      206C6F6E 
+ 2726      6720696E 
+ 2726      7400
+ 2727              	.LASF70:
+ 2728 0178 76617232 		.ascii	"var2\000"
+ 2728      00
+ 2729              	.LASF77:
+ 2730 017d 6164635F 		.ascii	"adc_H\000"
+ 2730      4800
+ 2731              	.LASF5:
+ 2732 0183 5F5F7569 		.ascii	"__uint16_t\000"
+ 2732      6E743136 
+ 2732      5F7400
+ 2733              	.LASF66:
+ 2734 018e 64657669 		.ascii	"device_address\000"
+ 2734      63655F61 
+ 2734      64647265 
+ 2734      737300
+ 2735              	.LASF68:
+ 2736 019d 6164635F 		.ascii	"adc_P\000"
+ 2736      5000
+ 2737              	.LASF20:
+ 2738 01a3 696E7436 		.ascii	"int64_t\000"
+ 2738      345F7400 
+ 2739              	.LASF84:
+ 2740 01ab 6E756D42 		.ascii	"numBytes\000"
+ 2740      79746573 
+ 2740      00
+ 2741              	.LASF22:
+ 2742 01b4 75696E74 		.ascii	"uint16\000"
+ 2742      313600
+ARM GAS  C:\Users\mame\AppData\Local\Temp\ccQcqcr0.s 			page 57
+
+
+ 2743              	.LASF42:
+ 2744 01bb 6469675F 		.ascii	"dig_P2\000"
+ 2744      503200
+ 2745              	.LASF15:
+ 2746 01c2 75696E74 		.ascii	"uint8_t\000"
+ 2746      385F7400 
+ 2747              	.LASF65:
+ 2748 01ca 64617461 		.ascii	"data_to_write\000"
+ 2748      5F746F5F 
+ 2748      77726974 
+ 2748      6500
+ 2749              	.LASF21:
+ 2750 01d8 75696E74 		.ascii	"uint8\000"
+ 2750      3800
+ 2751              	.LASF90:
+ 2752 01de 7061636B 		.ascii	"packet\000"
+ 2752      657400
+ 2753              	.LASF23:
+ 2754 01e5 666C6F61 		.ascii	"float\000"
+ 2754      7400
+ 2755              	.LASF57:
+ 2756 01eb 73657474 		.ascii	"settings\000"
+ 2756      696E6773 
+ 2756      00
+ 2757              	.LASF63:
+ 2758 01f4 424D4532 		.ascii	"BME280_start\000"
+ 2758      38305F73 
+ 2758      74617274 
+ 2758      00
+ 2759              	.LASF94:
+ 2760 0201 424D4532 		.ascii	"BME280.c\000"
+ 2760      38302E63 
+ 2760      00
+ 2761              	.LASF31:
+ 2762 020a 72756E4D 		.ascii	"runMode\000"
+ 2762      6F646500 
+ 2763              	.LASF78:
+ 2764 0212 424D4532 		.ascii	"BME280_readTempC\000"
+ 2764      38305F72 
+ 2764      65616454 
+ 2764      656D7043 
+ 2764      00
+ 2765              	.LASF81:
+ 2766 0223 424D4532 		.ascii	"BME280_readTempF\000"
+ 2766      38305F72 
+ 2766      65616454 
+ 2766      656D7046 
+ 2766      00
+ 2767              	.LASF11:
+ 2768 0234 5F5F696E 		.ascii	"__int64_t\000"
+ 2768      7436345F 
+ 2768      7400
+ 2769              	.LASF88:
+ 2770 023e 6F666673 		.ascii	"offset\000"
+ 2770      657400
+ 2771              	.LASF59:
+ 2772 0245 745F6669 		.ascii	"t_fine\000"
+ARM GAS  C:\Users\mame\AppData\Local\Temp\ccQcqcr0.s 			page 58
+
+
+ 2772      6E6500
+ 2773              	.LASF58:
+ 2774 024c 63616C69 		.ascii	"calibration\000"
+ 2774      62726174 
+ 2774      696F6E00 
+ 2775              	.LASF2:
+ 2776 0258 5F5F7569 		.ascii	"__uint8_t\000"
+ 2776      6E74385F 
+ 2776      7400
+ 2777              	.LASF26:
+ 2778 0262 6C6F6E67 		.ascii	"long double\000"
+ 2778      20646F75 
+ 2778      626C6500 
+ 2779              	.LASF82:
+ 2780 026e 424D4532 		.ascii	"BME280_readRegister\000"
+ 2780      38305F72 
+ 2780      65616452 
+ 2780      65676973 
+ 2780      74657200 
+ 2781              	.LASF43:
+ 2782 0282 6469675F 		.ascii	"dig_P3\000"
+ 2782      503300
+ 2783              	.LASF1:
+ 2784 0289 756E7369 		.ascii	"unsigned char\000"
+ 2784      676E6564 
+ 2784      20636861 
+ 2784      7200
+ 2785              	.LASF95:
+ 2786 0297 433A5C55 		.ascii	"C:\\Users\\mame\\Documents\\psoc\\BME280\\BME280\\B"
+ 2786      73657273 
+ 2786      5C6D616D 
+ 2786      655C446F 
+ 2786      63756D65 
+ 2787 02c3 4D453238 		.ascii	"ME280.cydsn\000"
+ 2787      302E6379 
+ 2787      64736E00 
+ 2788              	.LASF0:
+ 2789 02cf 7369676E 		.ascii	"signed char\000"
+ 2789      65642063 
+ 2789      68617200 
+ 2790              	.LASF13:
+ 2791 02db 6C6F6E67 		.ascii	"long long unsigned int\000"
+ 2791      206C6F6E 
+ 2791      6720756E 
+ 2791      7369676E 
+ 2791      65642069 
+ 2792              	.LASF71:
+ 2793 02f2 705F6163 		.ascii	"p_acc\000"
+ 2793      6300
+ 2794              	.LASF19:
+ 2795 02f8 75696E74 		.ascii	"uint32_t\000"
+ 2795      33325F74 
+ 2795      00
+ 2796              	.LASF14:
+ 2797 0301 756E7369 		.ascii	"unsigned int\000"
+ 2797      676E6564 
+ 2797      20696E74 
+ARM GAS  C:\Users\mame\AppData\Local\Temp\ccQcqcr0.s 			page 59
+
+
+ 2797      00
+ 2798              	.LASF17:
+ 2799 030e 75696E74 		.ascii	"uint16_t\000"
+ 2799      31365F74 
+ 2799      00
+ 2800              	.LASF50:
+ 2801 0317 6469675F 		.ascii	"dig_H1\000"
+ 2801      483100
+ 2802              	.LASF51:
+ 2803 031e 6469675F 		.ascii	"dig_H2\000"
+ 2803      483200
+ 2804              	.LASF52:
+ 2805 0325 6469675F 		.ascii	"dig_H3\000"
+ 2805      483300
+ 2806              	.LASF53:
+ 2807 032c 6469675F 		.ascii	"dig_H4\000"
+ 2807      483400
+ 2808              	.LASF54:
+ 2809 0333 6469675F 		.ascii	"dig_H5\000"
+ 2809      483500
+ 2810              	.LASF55:
+ 2811 033a 6469675F 		.ascii	"dig_H6\000"
+ 2811      483600
+ 2812              	.LASF72:
+ 2813 0341 424D4532 		.ascii	"BME280_readFloatPressure\000"
+ 2813      38305F72 
+ 2813      65616446 
+ 2813      6C6F6174 
+ 2813      50726573 
+ 2814              	.LASF6:
+ 2815 035a 73686F72 		.ascii	"short unsigned int\000"
+ 2815      7420756E 
+ 2815      7369676E 
+ 2815      65642069 
+ 2815      6E7400
+ 2816              	.LASF25:
+ 2817 036d 63686172 		.ascii	"char\000"
+ 2817      00
+ 2818              	.LASF87:
+ 2819 0372 424D4532 		.ascii	"BME280_writeRegister\000"
+ 2819      38305F77 
+ 2819      72697465 
+ 2819      52656769 
+ 2819      73746572 
+ 2820              	.LASF8:
+ 2821 0387 6C6F6E67 		.ascii	"long int\000"
+ 2821      20696E74 
+ 2821      00
+ 2822              	.LASF18:
+ 2823 0390 696E7433 		.ascii	"int32_t\000"
+ 2823      325F7400 
+ 2824              	.LASF16:
+ 2825 0398 696E7431 		.ascii	"int16_t\000"
+ 2825      365F7400 
+ 2826              	.LASF86:
+ 2827 03a0 424D4532 		.ascii	"BME280_init\000"
+ 2827      38305F69 
+ARM GAS  C:\Users\mame\AppData\Local\Temp\ccQcqcr0.s 			page 60
+
+
+ 2827      6E697400 
+ 2828              	.LASF41:
+ 2829 03ac 6469675F 		.ascii	"dig_P1\000"
+ 2829      503100
+ 2830              	.LASF61:
+ 2831 03b3 70726573 		.ascii	"press_Pa\000"
+ 2831      735F5061 
+ 2831      00
+ 2832              	.LASF89:
+ 2833 03bc 64617461 		.ascii	"data\000"
+ 2833      00
+ 2834              	.LASF44:
+ 2835 03c1 6469675F 		.ascii	"dig_P4\000"
+ 2835      503400
+ 2836              	.LASF45:
+ 2837 03c8 6469675F 		.ascii	"dig_P5\000"
+ 2837      503500
+ 2838              	.LASF46:
+ 2839 03cf 6469675F 		.ascii	"dig_P6\000"
+ 2839      503600
+ 2840              	.LASF47:
+ 2841 03d6 6469675F 		.ascii	"dig_P7\000"
+ 2841      503700
+ 2842              	.LASF48:
+ 2843 03dd 6469675F 		.ascii	"dig_P8\000"
+ 2843      503800
+ 2844              	.LASF49:
+ 2845 03e4 6469675F 		.ascii	"dig_P9\000"
+ 2845      503900
+ 2846              	.LASF64:
+ 2847 03eb 424D4532 		.ascii	"BME280_stop\000"
+ 2847      38305F73 
+ 2847      746F7000 
+ 2848              	.LASF10:
+ 2849 03f7 6C6F6E67 		.ascii	"long unsigned int\000"
+ 2849      20756E73 
+ 2849      69676E65 
+ 2849      6420696E 
+ 2849      7400
+ 2850              	.LASF24:
+ 2851 0409 646F7562 		.ascii	"double\000"
+ 2851      6C6500
+ 2852              	.LASF38:
+ 2853 0410 6469675F 		.ascii	"dig_T1\000"
+ 2853      543100
+ 2854              	.LASF39:
+ 2855 0417 6469675F 		.ascii	"dig_T2\000"
+ 2855      543200
+ 2856              	.LASF40:
+ 2857 041e 6469675F 		.ascii	"dig_T3\000"
+ 2857      543300
+ 2858              	.LASF28:
+ 2859 0425 636F6D6D 		.ascii	"commInterface\000"
+ 2859      496E7465 
+ 2859      72666163 
+ 2859      6500
+ 2860              	.LASF9:
+ARM GAS  C:\Users\mame\AppData\Local\Temp\ccQcqcr0.s 			page 61
+
+
+ 2861 0433 5F5F7569 		.ascii	"__uint32_t\000"
+ 2861      6E743332 
+ 2861      5F7400
+ 2862              	.LASF7:
+ 2863 043e 5F5F696E 		.ascii	"__int32_t\000"
+ 2863      7433325F 
+ 2863      7400
+ 2864              	.LASF3:
+ 2865 0448 5F5F696E 		.ascii	"__int16_t\000"
+ 2865      7431365F 
+ 2865      7400
+ 2866              	.LASF67:
+ 2867 0452 424D4532 		.ascii	"BME280_reset\000"
+ 2867      38305F72 
+ 2867      65736574 
+ 2867      00
+ 2868              	.LASF79:
+ 2869 045f 6164635F 		.ascii	"adc_T\000"
+ 2869      5400
+ 2870              	.LASF85:
+ 2871 0465 69746572 		.ascii	"iter\000"
+ 2871      00
+ 2872              	.LASF32:
+ 2873 046a 74537461 		.ascii	"tStandby\000"
+ 2873      6E646279 
+ 2873      00
+ 2874              	.LASF80:
+ 2875 0473 6F757470 		.ascii	"output\000"
+ 2875      757400
+ 2876              	.LASF37:
+ 2877 047a 53656E73 		.ascii	"SensorSettings\000"
+ 2877      6F725365 
+ 2877      7474696E 
+ 2877      677300
+ 2878              	.LASF74:
+ 2879 0489 68656967 		.ascii	"heightOutput\000"
+ 2879      68744F75 
+ 2879      74707574 
+ 2879      00
+ 2880              	.LASF33:
+ 2881 0496 66696C74 		.ascii	"filter\000"
+ 2881      657200
+ 2882              	.LASF91:
+ 2883 049d 49544D5F 		.ascii	"ITM_RxBuffer\000"
+ 2883      52784275 
+ 2883      66666572 
+ 2883      00
+ 2884              	.LASF60:
+ 2885 04aa 74656D70 		.ascii	"temp_C\000"
+ 2885      5F4300
+ 2886              		.ident	"GCC: (GNU Tools for ARM Embedded Processors) 5.4.1 20160609 (release) [ARM/embedded-5-bran

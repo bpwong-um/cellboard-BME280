@@ -1,0 +1,7 @@
+C:\Users\mame\Documents\PSoC Creator\4.1\Downloads ( 4.1).cylib\Downloads ( 4.1).cyprj|7bc7c1e9-69a6-4119-ba59-5a25ed81502c
+C:\Program Files\Cypress\PSoC Creator\4.1\PSoC Creator\psoc\content\default\CyAnnotationLibrary\CyAnnotationLibrary.cylib\CyAnnotationLibrary.cyprj|900b2b28-56aa-4e6f-bb17-9f61b82de5ae
+C:\Program Files\Cypress\PSoC Creator\4.1\PSoC Creator\psoc\content\cycomponentlibraryupdates\CyComponentLibraryUpdates.cylib\CyComponentLibraryUpdates.cyprj|35f3d351-f82f-40c6-afc8-cb35c20d9a5c
+C:\Program Files\Cypress\PSoC Creator\4.1\PSoC Creator\psoc\content\cycomponentlibrary\CyComponentLibrary.cylib\CyComponentLibrary.cyprj|0ca952fa-4800-4bfe-bc5f-dcfe8a312956
+C:\Program Files\Cypress\PSoC Creator\4.1\PSoC Creator\psoc\content\cyprimitives\CyPrimitives.cylib\CyPrimitives.cyprj|3c6c00ee-d695-40d5-ad20-5f368394371a
+C:\Program Files\Cypress\PSoC Creator\4.1\PSoC Creator\psoc\content\default\CyReferenceLibrary\CyReferenceLibrary.cylib\CyReferenceLibrary.cyprj|aacf5fdc-0347-4eb4-a1fd-1c51fcf45443
+C:\Users\mame\Documents\psoc\BME280\BME280\BME280.cydsn\BME280.cyprj|fc84543f-df5e-4f23-a401-8cc33c641968
